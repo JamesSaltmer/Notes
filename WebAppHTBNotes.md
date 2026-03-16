@@ -13,3 +13,7 @@ Author: James Saltmer
 | `Replace` | `User-Agent: Test Agent 1.0` | This will replace the line (Old agent) with the new agent (Test Agent 1.0) |
 | `Regex match` | `True` | In this case the exact User-Agent string / name might not be known so use the regex to match and replace the specified pattern |
 
+### Set a Burpsuite Proxy In metasploit Module:
+```bash
+set PROXIES HTTP:127.0.0.1:8080
+```
