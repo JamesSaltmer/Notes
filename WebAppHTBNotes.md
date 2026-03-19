@@ -88,3 +88,17 @@ for i in $(seq 1 1000); do echo $i >> ids.txt; done
 # Fuz the value of id parameter in the post body with numbers from 1-1000
 ffuf -w ids.txt:FUZZ -u http://admin.academy.htb:PORT/admin/admin.php -X POST -d 'id=FUZZ' -H 'Content-Type: application/x-www-form-urlencoded' -fs xxx
 ```
+
+## 2) Web Login Bruteforce
+
+Bruteforce with POST request
+```bash
+hydra -l admin -P passwords.txt www.example.com http-post-form "/login:user=^USER^&pass=^PASS^"
+# Could aslo change to "/login:user=^USER^&pass=^PASS^:F=Invalid credentials" to set fail condition
+# Or "/login:user=^USER^&pass=^PASS^:S=302" for success condition on response codes
+```
+
+Bruteforce with GET request
+```bash
+hydra -l basic-auth-user -P 2023-200_most_used_passwords.txt 127.0.0.1 http-get /
+```
