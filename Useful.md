@@ -1,6 +1,9 @@
-# CREST CRT Useful Commands Cheat Sheet
+# Useful Commands
 
-> Use only in authorised labs, exams, CTFs, or systems you have explicit permission to test.
+Extract Uploaded tools:
+```bash
+tar -xzvf tool-uploads.tgz
+```
 
 ---
 
