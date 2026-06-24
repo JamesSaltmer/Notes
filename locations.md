@@ -1,9 +1,6 @@
 # Transfer Tool Locations
 
 Kali paths for files from these notes that are useful to upload, transfer, serve over HTTP/SMB, or copy into a target session.
-
-This intentionally excludes tools already callable from `PATH`, such as `nmap`, `ffuf`, `netexec`, `evil-winrm`, `impacket-*`, `msfvenom`, `sqlmap`, and similar CLI tools.
-
 ## Linux Uploads
 
 | File | Kali location | Typical use |
@@ -48,3 +45,4 @@ This intentionally excludes tools already callable from `PATH`, such as `nmap`, 
 | SecLists web content lists | `/usr/share/seclists/Discovery/Web-Content/` | Directory and file fuzzing lists |
 | SecLists usernames | `/usr/share/seclists/Usernames/` | Username enumeration/spraying lists |
 | SecLists passwords | `/usr/share/seclists/Passwords/` | Password testing lists |
+
