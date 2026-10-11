@@ -1306,6 +1306,8 @@ SharpUp can identify common privilege escalation issues such as:
 
 UAC configuration and PATH issues may influence escalation or bypass opportunities.
 
+UAC Bypass Project: `https://github.com/hfiref0x/UACME`
+
 ## Check Whether UAC Is Enabled
 
 ```cmd
