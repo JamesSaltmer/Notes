@@ -909,6 +909,15 @@ Retrieves saved wireless key material where permitted.
 
 These techniques involve sensitive credential material. Use only in authorised labs or approved engagements.
 
+## Locations
+|File|Location|
+|--|--|
+|ntds.dit|C:\Windows\NTDS\ntds.dit|
+|SYSTEM|C:\Windows\System32\config\SYSTEM|
+|SAM|C:\Windows\System32\config\SAM|
+|SECURITY|C:\Windows\System32\config\SECURITY|
+
+
 ## Dump LSASS with ProcDump
 
 ```cmd
