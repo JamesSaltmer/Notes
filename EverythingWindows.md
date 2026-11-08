@@ -30,6 +30,7 @@
 21. [Placeholder Reference](#21-placeholder-reference)
 22. [Quick Workflow](#22-quick-reference)
 23. [Restricted Environments](#23-restricted-environments)
+24. [Windows Memory & Crash Dump Analysis](#24-windows-memory-&-crash-dump-analysis)
 
 ---
 
@@ -1983,3 +1984,72 @@ Confirm elevated group/token information and whether previously denied operation
 - Treat paths, addresses, accounts, and legacy UAC techniques in the HTB example as **lab-specific**, and only run breakout/elevation tests within authorised scope.
 
 **Source:** HTB Academy, *Citrix Breakout*, Module 67, Section 2502.
+
+# 24. Windows Memory & Crash Dump Analysis
+
+## Volatility
+
+Set variables (adjust paths/profile after `imageinfo`):
+
+```bash
+VOL=./volatility_2.6_lin64_standalone
+DUMP=memory.dmp
+PROFILE=Win2012R2x64
+```
+
+### Identify dump and profile
+
+```bash
+file "$DUMP"                            # Identify file type
+$VOL -f "$DUMP" imageinfo              # Suggested Windows profiles
+$VOL -f "$DUMP" kdbgscan               # Check kernel debugger structures
+$VOL --info | grep -E 'lsadump|hashdump|pslist'
+```
+
+> `imageinfo` profiles are suggestions. Select the correct one before running other plugins.
+
+### Core analysis
+
+```bash
+$VOL -f "$DUMP" --profile=$PROFILE crashinfo  # Crash dump information
+$VOL -f "$DUMP" --profile=$PROFILE pslist     # Active processes
+$VOL -f "$DUMP" --profile=$PROFILE pstree     # Parent/child processes
+$VOL -f "$DUMP" --profile=$PROFILE psscan     # Scan for process objects
+$VOL -f "$DUMP" --profile=$PROFILE cmdline    # Process command lines
+$VOL -f "$DUMP" --profile=$PROFILE consoles   # Console command history
+$VOL -f "$DUMP" --profile=$PROFILE netscan    # Network endpoints (supported Windows versions)
+$VOL -f "$DUMP" --profile=$PROFILE filescan   # File objects in memory
+```
+
+### Registry and credentials
+
+```bash
+$VOL -f "$DUMP" --profile=$PROFILE hivelist  # Registry hive locations
+$VOL -f "$DUMP" --profile=$PROFILE printkey -K 'Software\Microsoft\Windows\CurrentVersion\Run'
+$VOL -f "$DUMP" --profile=$PROFILE lsadump   # LSA secrets, e.g. DefaultPassword
+$VOL -f "$DUMP" --profile=$PROFILE hashdump  # Local account NTLM hashes
+$VOL -f "$DUMP" --profile=$PROFILE cachedump # Cached domain credentials
+```
+
+**Output tips:** `DefaultPassword` may be UTF-16LE (`44 00 6f 00` → `Do`). `DPAPI_SYSTEM` is key material, **not** a plaintext login password.
+
+### Export artifacts
+
+```bash
+mkdir -p output
+$VOL -f "$DUMP" --profile=$PROFILE procdump -p <PID> -D output/
+$VOL -f "$DUMP" --profile=$PROFILE memdump  -p <PID> -D output/
+$VOL -f "$DUMP" --profile=$PROFILE dumpregistry -D output/
+```
+
+### Common errors
+
+| Symptom | Fix |
+|---|---|
+| `Please specify a location (-l) or filename (-f)` | Add `-f "$DUMP"` |
+| Wrong/empty plugin output | Recheck `imageinfo`, profile and dump completeness |
+| `WindowsCrashDumpSpace64 ... extremely slow` | Performance warning; operation may still succeed |
+| `netscan` unsupported | Check plugin support for the Windows profile |
+
+**Reminder:** Not every `.dmp` contains full RAM; available artifacts depend on the dump type.
+
