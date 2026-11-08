@@ -1091,13 +1091,20 @@ lxc
 ```bash id="w38quo"
 lxd init
 ```
+---
+## Build a local image
+```bash
+git clone https://github.com/saghul/lxd-alpine-builder.git
+cd lxd-alpine-builder
 
+sudo ./build-alpine
+```
 ---
 
 ## Import Local Image
 
 ```bash id="eoa8qg"
-lxc image import alpine.tar.gz alpine.tar.gz.root --alias alpine
+lxc image import alpine-v3.XX-x86_64-YYYYMMDD_HHMM.tar.gz --alias alpine
 ```
 
 ---
