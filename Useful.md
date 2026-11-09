@@ -202,15 +202,15 @@ Message signing enabled but not required   ->  Signing required: No (vulnerable 
 ### SNMP community brute force
 
 ```bash
-onesixtyone -c <community-wordlist> <ip>
+onesixtyone -c /usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt <ip>
 ```
 
 ```bash
-sudo nmap -sU -p 161 --script snmp-brute --script-args snmp-brute.communitiesdb=<community-wordlist> <ip>
+sudo nmap -sU -p 161 --script snmp-brute --script-args snmp-brute.communitiesdb=/usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt <ip>
 ```
 
 ```bash
-hydra -P <community-wordlist> <ip> snmp
+hydra -P /usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt <ip> snmp
 ```
 
 ### SNMP system information
@@ -337,17 +337,17 @@ rpcclient -U "" -N <ip> -c "enumdomusers"
 ### SMTP user enumeration
 
 ```bash
-smtp-user-enum -M VRFY -U <user-wordlist> -t <ip>
+smtp-user-enum -M VRFY -U /usr/share/seclists/Usernames/Names/names.txt -t <ip>
 ```
 
 ```bash
-smtp-user-enum -M EXPN -U <user-wordlist> -t <ip>
+smtp-user-enum -M EXPN -U /usr/share/seclists/Usernames/Names/names.txt -t <ip>
 ```
 
 ### Kerberos user enumeration
 
 ```bash
-kerbrute userenum -d <domain> <user-wordlist> --dc <dc-ip>
+kerbrute userenum -d <domain> /usr/share/seclists/Usernames/xato-net-10-million-usernames-dup.txt --dc <dc-ip>
 ```
 
 ### Finger user enumeration
@@ -363,29 +363,29 @@ finger <username>@<ip>
 ### Hydra SSH
 
 ```bash
-hydra -L <user-list> -P <password-list> ssh://<ip>
+hydra -L /usr/share/seclists/Usernames/top-usernames-shortlist.txt -P /usr/share/seclists/Passwords/Common-Credentials/best1050.txt ssh://<ip>
 ```
 
 ```bash
-hydra -l <username> -P <password-list> -t 4 -f ssh://<ip>   # Known user; -t 4 avoids SSH rate limits, -f stops on first hit
+hydra -l <username> -P /usr/share/seclists/Passwords/Common-Credentials/best1050.txt -t 4 -f ssh://<ip>   # Known user; -t 4 avoids SSH rate limits, -f stops on first hit
 ```
 
 ### Hydra FTP
 
 ```bash
-hydra -L <user-list> -P <password-list> ftp://<ip>
+hydra -L /usr/share/seclists/Usernames/top-usernames-shortlist.txt -P /usr/share/seclists/Passwords/Common-Credentials/best1050.txt ftp://<ip>
 ```
 
 ### Hydra HTTP POST form
 
 ```bash
-hydra -L <user-list> -P <password-list> <ip> http-post-form "/<login-path>:<user-field>=^USER^&<pass-field>=^PASS^:<failure-message>"
+hydra -L /usr/share/seclists/Usernames/top-usernames-shortlist.txt -P /usr/share/seclists/Passwords/Common-Credentials/best1050.txt <ip> http-post-form "/<login-path>:<user-field>=^USER^&<pass-field>=^PASS^:<failure-message>"
 ```
 
 ### NetExec SMB password spray
 
 ```bash
-netexec smb <ip> -u <user-list> -p <password-list>
+netexec smb <ip> -u /usr/share/seclists/Usernames/top-usernames-shortlist.txt -p /usr/share/seclists/Passwords/Common-Credentials/best1050.txt
 ```
 
 ```bash
@@ -409,19 +409,19 @@ curl -i http://<ip>:<port>
 ### Directory brute force with Gobuster
 
 ```bash
-gobuster dir -u http://<ip>:<port> -w <wordlist>
+gobuster dir -u http://<ip>:<port> -w /usr/share/seclists/Discovery/Web-Content/common.txt
 ```
 
 ### Directory brute force with FFUF
 
 ```bash
-ffuf -u http://<ip>:<port>/FUZZ -w <wordlist>
+ffuf -u http://<ip>:<port>/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
 ```
 
 ### File extension fuzzing
 
 ```bash
-ffuf -u http://<ip>:<port>/FUZZ -w <wordlist> -e .php,.txt,.html,.bak
+ffuf -u http://<ip>:<port>/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-small-words.txt -e .php,.txt,.html,.bak
 ```
 
 ### Backup and config file hunting
@@ -432,11 +432,11 @@ curl -s http://<ip>:<port>/sitemap.xml
 ```
 
 ```bash
-gobuster dir -u http://<ip>:<port> -w <wordlist> -x bak,old,zip,tar,gz,txt,conf,config,xml,ini,php,sql -b 404
+gobuster dir -u http://<ip>:<port> -w /usr/share/seclists/Discovery/Web-Content/common.txt -x bak,old,zip,tar,gz,txt,conf,config,xml,ini,php,sql -b 404
 ```
 
 ```bash
-ffuf -u http://<ip>:<port>/FUZZ -w <wordlist> -recursion -recursion-depth 2 -e .bak,.old,.zip
+ffuf -u http://<ip>:<port>/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -recursion -recursion-depth 2 -e .bak,.old,.zip
 ```
 
 Common names to check:
@@ -1183,7 +1183,7 @@ nmap -p 139,445 -sV -sC <ip> && enum4linux-ng <ip>
 ### Quick web enum
 
 ```bash
-whatweb http://<ip>:<port> && gobuster dir -u http://<ip>:<port> -w <wordlist>
+whatweb http://<ip>:<port> && gobuster dir -u http://<ip>:<port> -w /usr/share/seclists/Discovery/Web-Content/common.txt
 ```
 
 ### Quick service check
@@ -1201,6 +1201,8 @@ nc -lvnp <listen-port>
 ---
 
 ## 21. Common Wordlists
+
+Full list by task: `locations.md` → *Wordlists*.
 
 ```text
 /usr/share/wordlists/dirb/common.txt
@@ -1318,9 +1320,9 @@ nmap -sV -sC -oN scans/basic.txt <target>
 | `<domain>`                     | DNS, Windows, or Kerberos domain                 |
 | `<username>`                   | Single username                                  |
 | `<password>`                   | Single password                                  |
-| `<user-list>`                  | File containing usernames                        |
-| `<password-list>`              | File containing passwords                        |
-| `<wordlist>`                   | Generic wordlist                                 |
+| `<user-list>`                  | Username file (see `locations.md`)               |
+| `<password-list>`              | Password file (see `locations.md`)               |
+| `<wordlist>`                   | Any wordlist (see `locations.md`)                |
 | `<port>`                       | TCP or UDP port                                  |
 | `<ports>`                      | Comma-separated port list                        |
 | `<gateway-ip>`                 | Router or pivot gateway                          |

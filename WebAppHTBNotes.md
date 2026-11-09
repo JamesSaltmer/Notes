@@ -29,55 +29,55 @@ ffuf -h
 Basic Directory Enum
 ```bash
 #  | -w : Wordlist | -u : URL | -t : threads |
-ffuf -w <SNIP>:FUZZ -u http://SERVER_IP:PORT/FUZZ 
+ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt:FUZZ -u http://SERVER_IP:PORT/FUZZ 
 ```
 
 ### Extensions
 Fuzz for the Type of Extension Used:
 ```bash
-ffuf -w /opt/useful/seclists/Discovery/Web-Content/web-extensions.txt:FUZZ -u http://SERVER_IP:PORT/blog/indexFUZZ
+ffuf -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt:FUZZ -u http://SERVER_IP:PORT/blog/indexFUZZ
 ```
 
 Fuzz for directories ending in specified exension (.PHP in this case):
 ```bash
-ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://SERVER_IP:PORT/blog/FUZZ.php
+ffuf -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt:FUZZ -u http://SERVER_IP:PORT/blog/FUZZ.php
 ```
 
 ### Reccursive Enumeration
 Run ffuf with a recursion depth of 1 for directories with php extension:
 ```bash
-ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://SERVER_IP:PORT/FUZZ -recursion -recursion-depth 1 -e .php -v
+ffuf -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt:FUZZ -u http://SERVER_IP:PORT/FUZZ -recursion -recursion-depth 1 -e .php -v
 ```
 
 
 ### Subdomain Fuzzing
 ```bash
-ffuf -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u https://FUZZ.inlanefreight.com/
+ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u https://FUZZ.inlanefreight.com/
 ```
 
 ### VHost Fuzzing
 ```bash
-ffuf -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://academy.htb:PORT/ -H 'Host: FUZZ.academy.htb'
+ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://academy.htb:PORT/ -H 'Host: FUZZ.academy.htb'
 ```
 
 ### FFUF Filtering
 Filter Out Responses Based on Size:
 ```bash
 # Filter out responses with a size of 900
-ffuf -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://academy.htb:PORT/ -H 'Host: FUZZ.academy.htb' -fs 900
+ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://academy.htb:PORT/ -H 'Host: FUZZ.academy.htb' -fs 900
 ```
 
 ### Enumerate Parameters
 Enumerate Get Params
 ```bash
 # Change xxx to filter out responses
-ffuf -w /opt/useful/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u http://admin.academy.htb:PORT/admin/admin.php?FUZZ=key -fs xxx
+ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u http://admin.academy.htb:PORT/admin/admin.php?FUZZ=key -fs xxx
 ```
 
 Enumerate Post params
 ```bash
 # Change xxx to filter out responses
-ffuf -w /opt/useful/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u http://admin.academy.htb:PORT/admin/admin.php -X POST -d 'FUZZ=key' -H 'Content-Type: application/x-www-form-urlencoded' -fs xxx
+ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u http://admin.academy.htb:PORT/admin/admin.php -X POST -d 'FUZZ=key' -H 'Content-Type: application/x-www-form-urlencoded' -fs xxx
 ```
 
 Enumerate Param Values
@@ -93,14 +93,14 @@ ffuf -w ids.txt:FUZZ -u http://admin.academy.htb:PORT/admin/admin.php -X POST -d
 
 Bruteforce with POST request
 ```bash
-hydra -l admin -P passwords.txt www.example.com http-post-form "/login:user=^USER^&pass=^PASS^"
+hydra -l admin -P /usr/share/seclists/Passwords/Common-Credentials/best1050.txt www.example.com http-post-form "/login:user=^USER^&pass=^PASS^"
 # Could aslo change to "/login:user=^USER^&pass=^PASS^:F=Invalid credentials" to set fail condition
 # Or "/login:user=^USER^&pass=^PASS^:S=302" for success condition on response codes
 ```
 
 Bruteforce with GET request
 ```bash
-hydra -l basic-auth-user -P 2023-200_most_used_passwords.txt 127.0.0.1 http-get /
+hydra -l basic-auth-user -P /usr/share/seclists/Passwords/Common-Credentials/2023-200_most_used_passwords.txt 127.0.0.1 http-get /
 ```
 
 ## 4) SQL Injection
