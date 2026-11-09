@@ -639,45 +639,141 @@ nc <target-ip> <port> < <input-file>
 
 ## 16. Routing
 
-### Show routes
+### Enumerate Network Configuration
 
 ```bash
+ip -br addr                   # Interfaces and IP addresses
+ip route                      # Current routing table
+route -n                      # Legacy routing table
+ip route get <IP>             # Show route/interface used to reach IP
+```
+
+### Add Static Routes
+
+```bash
+# Route to an entire network
+sudo ip route add <NETWORK>/<CIDR> via <GATEWAY>
+
+# Route to a single host (/32)
+sudo ip route add <IP>/32 via <GATEWAY>
+
+# Specify outgoing interface
+sudo ip route add <NETWORK>/<CIDR> via <GATEWAY> dev eth0
+
+# Directly connected network (no gateway)
+sudo ip route add <NETWORK>/<CIDR> dev eth0
+
+# Replace an existing route
+sudo ip route replace <NETWORK>/<CIDR> via <GATEWAY>
+```
+
+**Note:** The gateway must normally be directly reachable. Use `ip -br addr` and `ip route` to identify the correct interface and gateway.
+
+### Multi-Hop Routing (Gateway Behind Another Gateway)
+
+If a new gateway is on an unreachable subnet, it may be reachable through an existing gateway.
+
+**Example topology:**
+
+```text
+Kali (172.17.89.100)
+    |
+    v
+Gateway 1 (172.17.89.254)
+    |
+    v
+Gateway 2 (172.20.31.254)
+    |
+    v
+Target (10.50.10.20)
+```
+
+```bash
+# 1. Inspect existing routes
 ip route
+ip route get 172.20.31.254
+
+# 2. Route to Gateway 2 through Gateway 1
+sudo ip route add 172.20.31.254/32 via 172.17.89.254
+
+# 3. Route the target through the directly reachable Gateway 1
+sudo ip route add 10.50.10.20/32 via 172.17.89.254
+
+# 4. Verify and test
+ip route get 10.50.10.20
+traceroute -n 10.50.10.20
+nc -nvz -w 3 10.50.10.20 <PORT>
 ```
+
+**Important:**
+- Gateway 1 must know how to forward traffic towards Gateway 2 and the target.
+- You generally only specify the **first reachable gateway** in your local routing table.
+- Each intermediate router independently determines the next hop.
+- Adding a route to Gateway 2 does not automatically make Gateway 2 the next hop for the target.
+- If Gateway 1 lacks a route to the target, you may need to configure routing on Gateway 1 or use a tunnel/pivot.
+- A valid local route does not guarantee that the return path exists.
+
+### Verify & Troubleshoot
 
 ```bash
-route -n
+ip route get <IP>             # Confirm selected route
+ping -c 3 <GATEWAY>           # Test gateway reachability
+ping -c 3 <IP>                # Test destination (ICMP may be blocked)
+traceroute -n <IP>            # Trace packet path
+tracepath <IP>                # Alternative traceroute
+nc -nvz -w 3 <IP> <PORT>      # Test TCP connectivity
+nc -nv -w 5 <IP> <PORT>       # Connect and read service banner
 ```
 
-### Add route to a network
+### Delete Routes
 
 ```bash
-sudo ip route add <destination-network>/<cidr> via <gateway-ip>
+sudo ip route del <NETWORK>/<CIDR>
+sudo ip route del <IP>/32
 ```
 
-### Add route to a single host
+### Example: Access a Service via a Router
+
+**Target:** `172.20.31.10:23` via `172.17.89.254`
 
 ```bash
-sudo ip route add <destination-ip> via <gateway-ip>
+# 1. Check connectivity to gateway
+ip -br addr
+ip route
+ping -c 2 172.17.89.254
+
+# 2. Add host route
+sudo ip route add 172.20.31.10/32 via 172.17.89.254
+
+# 3. Verify routing
+ip route get 172.20.31.10
+
+# 4. Connect to Telnet and retrieve banner
+nc -nv -w 5 172.20.31.10 23
+telnet 172.20.31.10 23
+
+# 5. Remove route
+sudo ip route del 172.20.31.10/32
 ```
 
-### Delete route
+### Common Errors
 
-```bash
-sudo ip route del <destination-network>/<cidr>
-```
+| Error | Likely cause |
+|---|---|
+| `Nexthop has invalid gateway` | Gateway not directly reachable |
+| `RTNETLINK answers: File exists` | Route already exists |
+| `Network is unreachable` | Missing/incorrect route or interface |
+| `Connection refused` | Service not listening or actively rejected |
+| `Connection timed out` | Firewall, routing or return-path issue |
 
-### Test route
-
-```bash
-ping <destination-ip>
-```
-
-```bash
-traceroute <destination-ip>
-```
-
----
+**Remember:**
+- `/32` = single IPv4 host; `/24` = 256 IPv4 addresses.
+- More specific routes take precedence (longest-prefix match).
+- Static routes added using `ip route` are generally temporary.
+- Ping failure does not necessarily indicate routing failure.
+- Both forward and return paths must work for communication.
+- In multi-hop routing, configure the route via the **first directly reachable gateway**.
+- If the gateway is a pivot host, it must support forwarding/routing; a local static route alone is insufficient.
 
 ## 17. Telnet and Banner Grabbing
 
