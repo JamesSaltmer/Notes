@@ -1985,6 +1985,65 @@ Confirm elevated group/token information and whether previously denied operation
 
 **Source:** HTB Academy, *Citrix Breakout*, Module 67, Section 2502.
 
+### 23.12 Exam Quick Wins (No Shell Yet)
+
+**Identify the current username**
+
+| Method | How |
+|---|---|
+| File dialog env vars | In any Open/Save dialog type `%USERPROFILE%` in **File name** → Enter. The address bar shows `C:\Users\<username>` |
+| Default save location | **Save As** in Notepad/Paint usually opens `C:\Users\<username>\Documents` |
+| Task Manager | `Ctrl+Shift+Esc` → **Users** tab, or **Details** tab → *User name* column |
+| Start menu | Account tile / profile picture shows the user |
+| Security screen | `Ctrl+Alt+Del` (`Ctrl+Alt+End` inside RDP) |
+| Once you have a shell | `whoami`, `echo %USERNAME%`, `$env:USERNAME` |
+
+**Read a file in a blocked folder**
+
+1. Notepad / WordPad → **File → Open** → set filter to **All Files**.
+2. Type the full path straight into **File name**: `C:\Restricted\department.txt` → Enter. This often works even when browsing to the folder is blocked.
+3. If that fails, try UNC: `\\127.0.0.1\c$\Restricted\department.txt`, or `\\localhost\c$\...`.
+4. A browser can read it too: `file:///C:/Restricted/department.txt`.
+5. Drag the file from a dialog onto an open Notepad window.
+
+**Get command execution**
+
+| Route | How |
+|---|---|
+| Run dialog | `Win+R` → `cmd` / `powershell` |
+| Task Manager | `Ctrl+Shift+Esc` → **File → Run new task** → `cmd` (tick *Create with administrative privileges* if offered) |
+| File dialog | Browse to `C:\Windows\System32`, right-click `cmd.exe` → **Open**. Or type `cmd.exe` in the dialog's address bar |
+| Help / links | Any **Help** or hyperlink opens a browser → `file:///C:/Windows/System32/` → run `cmd.exe` |
+| Shortcut / batch | See 23.6 and 23.7 |
+| Shell folders | Address bar: `shell:System`, `shell:Startup`, `shell:AppData` |
+| Alternative binaries | `C:\Windows\SysWOW64\cmd.exe`, `powershell_ise.exe`, `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe` |
+| Path-based block | Copy `cmd.exe` to the Desktop / Documents and rename it (beats path rules, not hash rules) |
+| mshta | `mshta vbscript:Execute("CreateObject(""WScript.Shell"").Run ""cmd"":close")` |
+
+If cmd shows *"The command prompt has been disabled by your administrator"*, the `DisableCMD` policy is on — `.bat` files are blocked too, so go straight to PowerShell / PowerShell ISE.
+
+**Identify the hostname**
+
+```cmd
+hostname
+echo %COMPUTERNAME%
+```
+
+```powershell
+$env:COMPUTERNAME
+```
+
+No shell: `Win+Pause`, **Settings → System → About**, `sysdm.cpl`, `msinfo32`, or `whoami` output (`HOST\user` for local accounts).
+
+**Find the trophy once you have a shell**
+
+```cmd
+type C:\ProgramData\Operations\trophy.txt
+dir C:\ /s /b /a 2>nul | findstr /i trophy
+```
+
+Note: `C:\ProgramData` is hidden — in dialogs type the path directly rather than browsing for it.
+
 # 24. Windows Memory & Crash Dump Analysis
 
 ## Volatility

