@@ -1,0 +1,56 @@
+CRT NOTES SEARCH  —  paste the SETUP block into the terminal once, then use s / h / g
+==============================================================================
+
+---- SETUP (paste once; order: ~/Notes, then search . and ~, then current dir) -
+N=~/Notes; [ -f "$N/Useful.md" ] || N=$(for d in "$PWD" ~; do find "$d" -mindepth 1 -maxdepth 5 -name '.?*' -prune -o -name SEARCH.txt -printf '%d %h\n' 2>/dev/null | sort -n | while read -r dep p; do [ -f "$p/Useful.md" ] && echo "$p"; done; done | head -1); N=${N:-$PWD}; [ -f "$N/Useful.md" ] && echo "Notes: $N" || echo "Notes NOT found - cd into them and paste again, or set N=/path"
+s(){ for f in "$N"/*.md; do awk -v q="$(printf '%s' "$1" | tr A-Z a-z)" -v F="${f##*/}" '
+/^```/{fence=!fence}
+!fence && /^#/{ match($0,/^#+/); l=RLENGTH; if(p && l<=lvl) p=0; if(!p && index(tolower($0),q)){p=1; lvl=l; print "\n==> " F ":" NR} }
+p' "$f"; done; }
+h(){ grep -n '^#' "$N"/*.md | grep -i -- "$1" | sed "s|$N/||"; }
+g(){ grep -rniI --color=always -B2 -A${2:-8} -- "$1" "$N"; }
+------------------------------------------------------------------------------
+
+s "term"      print every whole section whose HEADING contains term   s "smb signing"
+h "term"      list matching headings with file:line                    h snmp
+g "term" [n]  grep note bodies, n lines of context (default 8)         g sysContact 2
+add | less -R to page long output:  s "sql injection" | less -R
+open at a line:  less +188 $N/Useful.md
+
+---- INFRASTRUCTURE ----------------------------------------------------------
+Host discovery     s "count responding"   s "ping sweep"   s "arp discovery"
+Port scan          s "full tcp"   s "udp top"   s "non-standard"   s "banner"
+SSH version        s "ssh product"
+DNS                s "zone transfer"   s "specific record"   s "dns lookup"
+NetBIOS domain     s "netbios scan"   s "name table"
+SMB                s "smb signing"   s "smb enumeration"   s "rpcclient"
+SNMP               s "snmp"            (sysContact OID 1.3.6.1.2.1.1.4.0)
+NFS / FTP          s "nfs"   s "anonymous ftp"
+Passwords          s "hydra"   s "password cracking"   s "wordlists"
+Known vulns        s "classic vulnerable"   s "vulnerability scripts"   s "exploit-db"
+Linux privesc      s "high-value"   s "sudo"   s "suid"   s "capabilities"   s "cron"
+                   s "path hijacking"   s "ld_preload"   s "escaping shells"
+Windows privesc    s "token impersonation"   s "service misconfiguration"
+                   s "unquoted"   s "alwaysinstallelevated"
+Desktop breakout   s "exam quick wins"   s "file dialogs"   s "shortcuts"
+                   s "script execution"   s "restricted environments"
+Routing            s "add static routes"   s "multi-hop"   s "routed network"
+                   s "open / closed"   s "prove the path"   s "common errors"
+Pivoting           s "pivoting"   s "chisel"
+PCAP / VLAN        s "pcap"   s "vlan"   s "nessus"
+
+---- WEB ---------------------------------------------------------------------
+Dir / backups      s "backup and config"   s "ffuf"   s "gobuster"
+Info disclosure    s "information disclosure"
+XSS                s "cross-site scripting"
+Cookies            s "cookie and session"
+SQLi               s "sql injection"   s "union"   s "sql map"
+Auth bypass        s "authentication bypass"   s "web login bruteforce"
+Traversal / LFI    s "path traversal"         (curl --path-as-is !)
+Upload             s "file upload"
+Other              s "command injection"   s "idor"   s "csrf"   s "ssti"   s "ssrf"   s "xxe"
+
+---- SHELLS / LOOT -----------------------------------------------------------
+Shells             s "reverse shells"   s "stabilisation"   s "php webshell"
+File transfer      s "file transfer"
+Find trophies      s "file searching"   g trophy
