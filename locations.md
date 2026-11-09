@@ -15,14 +15,13 @@ Kali paths for files from these notes that are useful to upload, transfer, serve
 | `winPEASx86.exe` | `/usr/share/peass/winpeas/winPEASx86.exe` | Windows privilege escalation enumeration, 32-bit |
 | `winPEASany.exe` | `/usr/share/peass/winpeas/winPEASany.exe` | Windows privilege escalation enumeration, AnyCPU build |
 | `winPEAS.bat` | `/usr/share/peass/winpeas/winPEAS.bat` | Windows privilege escalation enumeration via batch |
-| `winPEAS.ps1` | `/usr/share/peass/winpeas/winPEAS.ps1` | Windows privilege escalation enumeration via PowerShell |
 | `nc.exe` | `/usr/share/windows-resources/binaries/nc.exe` | Windows reverse shells and file transfer |
 | `plink.exe` | `/usr/share/windows-resources/binaries/plink.exe` | Windows SSH tunnelling/pivoting |
 | `PowerView.ps1` | `/usr/share/windows-resources/powersploit/Recon/PowerView.ps1` | AD enumeration from PowerShell |
 | `PowerUp.ps1` | `/usr/share/windows-resources/powersploit/Privesc/PowerUp.ps1` | Windows privilege escalation checks |
 | `mimikatz.exe` x64 | `/usr/share/windows-resources/mimikatz/x64/mimikatz.exe` | Credential and Kerberos operations, 64-bit |
 | `mimikatz.exe` x86 | `/usr/share/windows-resources/mimikatz/Win32/mimikatz.exe` | Credential and Kerberos operations, 32-bit |
-| `SharpHound.ps1` | `/usr/share/powershell-empire/empire/server/data/module_source/situational_awareness/network/SharpHound.ps1` | BloodHound collection from PowerShell |
+| `SharpHound.ps1` | `/usr/lib/bloodhound/resources/app/Collectors/SharpHound.ps1` | BloodHound collection from PowerShell |
 | `SharpHound.exe` | `/usr/share/metasploit-framework/data/post/SharpHound.exe` | BloodHound collection from Windows |
 
 ## Web Shells
@@ -64,12 +63,12 @@ All paths are Kali defaults (`/usr/share/wordlists` and `/usr/share/seclists`) �
 for f in a b c d e f g h i j k l m n o p q r s t u v w x y z; do sed "s/^/$f/" /usr/share/seclists/Usernames/Names/familynames-usa-top1000.txt; done | tr 'A-Z' 'a-z' > /tmp/jsmith.txt
 ```
 
-### Passwords — online attacks (hydra / netexec)
+### Passwords — online attacks (hydra / crackmapexec)
 
 | List | Path | Size |
 |---|---|---|
 | Top 25 | `/usr/share/seclists/Passwords/Common-Credentials/top-passwords-shortlist.txt` | 25 |
-| 2023 top 200 | `/usr/share/seclists/Passwords/Common-Credentials/2023-200_most_used_passwords.txt` | 200 |
+| 2023 top 200 | `/usr/share/seclists/Passwords/2023-200_most_used_passwords.txt` | 200 |
 | Worst 500 | `/usr/share/seclists/Passwords/Common-Credentials/500-worst-passwords.txt` | 500 |
 | best1050 | `/usr/share/seclists/Passwords/Common-Credentials/best1050.txt` | 1k (default in notes) |
 | Unix passwords | `/usr/share/wordlists/metasploit/unix_passwords.txt` | 1k |
@@ -87,7 +86,7 @@ for f in a b c d e f g h i j k l m n o p q r s t u v w x y z; do sed "s/^/$f/" /
 | rockyou (compressed) | `/usr/share/wordlists/rockyou.txt.gz` |
 | NCSC 100k | `/usr/share/seclists/Passwords/Common-Credentials/100k-most-used-passwords-NCSC.txt` |
 | metasploit password.lst | `/usr/share/wordlists/metasploit/password.lst` |
-| hashcat best66 (was best64) | `/usr/share/hashcat/rules/best66.rule` |
+| hashcat best64 (newer Kali: best66) | `/usr/share/hashcat/rules/best64.rule` |
 | hashcat rockyou-30000 | `/usr/share/hashcat/rules/rockyou-30000.rule` |
 | hashcat d3ad0ne / dive | `/usr/share/hashcat/rules/d3ad0ne.rule`, `/usr/share/hashcat/rules/dive.rule` |
 | john best64 | `/usr/share/john/rules/best64.rule` |
@@ -153,11 +152,11 @@ for f in a b c d e f g h i j k l m n o p q r s t u v w x y z; do sed "s/^/$f/" /
 | Logins / admin pages | `/usr/share/seclists/Discovery/Web-Content/Logins.fuzz.txt` | 89 |
 | API endpoints | `/usr/share/seclists/Discovery/Web-Content/api/api-endpoints.txt` | 269 |
 | API objects | `/usr/share/seclists/Discovery/Web-Content/api/objects.txt` | 3k |
-| CGI scripts (Shellshock) | `/usr/share/seclists/Discovery/Web-Content/LEGACY-SERVICES/CGIs/CGIs.txt` | |
-| Apache | `/usr/share/seclists/Discovery/Web-Content/Web-Servers/Apache.txt` | |
-| Tomcat | `/usr/share/seclists/Discovery/Web-Content/Web-Servers/Apache-Tomcat.txt` | |
-| IIS | `/usr/share/seclists/Discovery/Web-Content/Web-Servers/IIS.txt` | |
-| nginx | `/usr/share/seclists/Discovery/Web-Content/Web-Servers/nginx.txt` | |
+| CGI scripts (Shellshock) | `/usr/share/seclists/Discovery/Web-Content/CGIs.txt` | |
+| Apache | `/usr/share/seclists/Discovery/Web-Content/apache.txt` | |
+| Tomcat | `/usr/share/seclists/Discovery/Web-Content/tomcat.txt` | |
+| IIS | `/usr/share/seclists/Discovery/Web-Content/IIS.fuzz.txt` | |
+| nginx | `/usr/share/seclists/Discovery/Web-Content/nginx.txt` | |
 | WordPress | `/usr/share/seclists/Discovery/Web-Content/CMS/wordpress.fuzz.txt` | |
 | dirb vuln lists | `/usr/share/wordlists/dirb/vulns/` | per-product |
 
@@ -175,11 +174,10 @@ for f in a b c d e f g h i j k l m n o p q r s t u v w x y z; do sed "s/^/$f/" /
 | LFI Linux (files) | `/usr/share/seclists/Fuzzing/LFI/LFI-gracefulsecurity-linux.txt` |
 | LFI Windows | `/usr/share/seclists/Fuzzing/LFI/LFI-gracefulsecurity-windows.txt` |
 | Traversal | `/usr/share/wordlists/wfuzz/Injections/Traversal.txt` |
-| SQLi quick | `/usr/share/seclists/Fuzzing/Databases/SQLi/quick-SQLi.txt` |
-| SQLi generic | `/usr/share/seclists/Fuzzing/Databases/SQLi/Generic-SQLi.txt` |
-| SQLi login bypass | `/usr/share/seclists/Fuzzing/Databases/SQLi/sqli.auth.bypass.txt` |
-| Login bypass (mixed) | `/usr/share/seclists/Fuzzing/login_bypass.txt` |
-| NoSQL | `/usr/share/seclists/Fuzzing/Databases/SQLi/NoSQL.txt` |
+| SQLi quick | `/usr/share/seclists/Fuzzing/SQLi/quick-SQLi.txt` |
+| SQLi generic | `/usr/share/seclists/Fuzzing/SQLi/Generic-SQLi.txt` |
+| SQLi login bypass | `/usr/share/seclists/Fuzzing/Databases/sqli.auth.bypass.txt` |
+| NoSQL | `/usr/share/seclists/Fuzzing/Databases/NoSQL.txt` |
 | XSS | `/usr/share/seclists/Fuzzing/XSS/human-friendly/XSS-Jhaddix.txt` |
 | Command injection | `/usr/share/seclists/Fuzzing/command-injection-commix.txt` |
 | Special characters | `/usr/share/seclists/Fuzzing/special-chars.txt` |
@@ -205,5 +203,5 @@ for f in a b c d e f g h i j k l m n o p q r s t u v w x y z; do sed "s/^/$f/" /
 | SSH / FTP brute force | `/usr/share/seclists/Usernames/top-usernames-shortlist.txt` + `/usr/share/seclists/Passwords/Common-Credentials/best1050.txt` |
 | Default creds | `hydra -C /usr/share/seclists/Passwords/Default-Credentials/<service>-betterdefaultpasslist.txt` |
 | SMTP user enum | `/usr/share/seclists/Usernames/Names/names.txt` |
-| Hash cracking | `/usr/share/wordlists/rockyou.txt` + `-r /usr/share/hashcat/rules/best66.rule` |
+| Hash cracking | `/usr/share/wordlists/rockyou.txt` + `-r /usr/share/hashcat/rules/best64.rule` |
 | Parameter fuzzing | `/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt` |

